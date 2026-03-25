@@ -46,7 +46,7 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
 
         /* 使用 dvh 确保基础容器高度正确 */
-        body { background-color: var(--bg-color); color: var(--text-main); padding: 24px 16px; display: flex; justify-content: center; min-height: 100vh; min-height: 100dvh; }
+        body { background-color: var(--bg-color); color: var(--text-main); padding: 20px 16px; display: flex; justify-content: center; min-height: 100vh; min-height: 100dvh; }
         .container { width: 100%; max-width: 500px; display: flex; flex-direction: column; gap: 20px; padding-bottom: 40px; }
 
         h1 { font-size: 28px; font-weight: 800; text-align: center; margin-bottom: 4px; }
@@ -105,61 +105,64 @@
         .result-value { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.4; }
 
         /* ================= iOS 风格自定义日期选择器 ================= */
-        /* 核心修复：纯血 100dvh 动态高度，不使用任何 translateY 强制偏移 */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; background-color: var(--modal-overlay); display: flex; justify-content: center; align-items: center; z-index: 999; opacity: 0; pointer-events: none; transition: opacity 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
         .modal-overlay.show { opacity: 1; pointer-events: auto; }
 
-        /* 核心修复：加入 max-height: 92dvh 保证在任何小屏手机或大地址栏下都不越界，纯靠父级的 flex 居中 */
-        .ios-picker { width: 90%; max-width: 360px; max-height: 92dvh; overflow-y: auto; overscroll-behavior: none; background: var(--modal-bg-light); backdrop-filter: blur(25px) saturate(180%); -webkit-backdrop-filter: blur(25px) saturate(180%); border-radius: 28px; padding: 24px 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); transform: scale(0.95); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); border: 1px solid var(--dropdown-border); scrollbar-width: none; }
+        /* 核心修复：极限压缩 padding，保证小屏绝对不遮挡 */
+        .ios-picker { width: 90%; max-width: 360px; max-height: 94dvh; overflow-y: auto; overscroll-behavior: none; background: var(--modal-bg-light); backdrop-filter: blur(25px) saturate(180%); -webkit-backdrop-filter: blur(25px) saturate(180%); border-radius: 24px; padding: 16px 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); transform: scale(0.95); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); border: 1px solid var(--dropdown-border); scrollbar-width: none; }
         .ios-picker::-webkit-scrollbar { display: none; }
         .modal-overlay.show .ios-picker { transform: scale(1); }
 
-        .picker-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; position: relative; z-index: 10; }
+        /* 压缩头部间距 */
+        .picker-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; position: relative; z-index: 10; }
         .dropdown-group { display: flex; gap: 6px; align-items: center; }
         
         .custom-select { position: relative; }
-        .select-btn { background: rgba(142, 142, 147, 0.12); padding: 6px 10px; border-radius: 8px; font-size: 18px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 4px; cursor: pointer; transition: background 0.2s; }
+        .select-btn { background: rgba(142, 142, 147, 0.12); padding: 4px 8px; border-radius: 8px; font-size: 17px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 4px; cursor: pointer; transition: background 0.2s; }
         .select-btn:active { background: rgba(142, 142, 147, 0.25); }
         .select-btn::after { content: "▾"; font-size: 14px; color: var(--text-secondary); }
 
-        .select-menu { position: absolute; top: calc(100% + 8px); left: 0; background: var(--dropdown-bg); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); border: 1px solid var(--dropdown-border); border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); max-height: 220px; overflow-y: auto; overflow-x: hidden; min-width: 100px; z-index: 100; opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.95); transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1); scrollbar-width: thin; scrollbar-color: var(--scrollbar-thumb) transparent; }
+        .select-menu { position: absolute; top: calc(100% + 8px); left: 0; background: var(--dropdown-bg); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); border: 1px solid var(--dropdown-border); border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); max-height: 200px; overflow-y: auto; overflow-x: hidden; min-width: 100px; z-index: 100; opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.95); transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1); scrollbar-width: thin; scrollbar-color: var(--scrollbar-thumb) transparent; }
         .select-menu.show { opacity: 1; pointer-events: auto; transform: translateY(0) scale(1); }
         .select-menu::-webkit-scrollbar { width: 5px; }
         .select-menu::-webkit-scrollbar-track { background: transparent; margin: 6px 0; }
         .select-menu::-webkit-scrollbar-thumb { background-color: var(--scrollbar-thumb); border-radius: 10px; }
         
-        .select-item { padding: 12px 16px; font-size: 17px; font-weight: 500; text-align: center; color: var(--text-main); border-bottom: 1px solid var(--dropdown-border); cursor: pointer; transition: background 0.1s; }
+        .select-item { padding: 10px 16px; font-size: 16px; font-weight: 500; text-align: center; color: var(--text-main); border-bottom: 1px solid var(--dropdown-border); cursor: pointer; transition: background 0.1s; }
         .select-item:last-child { border-bottom: none; }
         .select-item:active { background: var(--segment-bg); }
         .select-item.selected { color: var(--accent-color); font-weight: 700; background: rgba(0, 122, 255, 0.08); }
 
-        .btn-today-modal { background-color: rgba(0, 122, 255, 0.1); color: var(--accent-color); border: none; padding: 6px 12px; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; transition: background-color 0.2s; }
+        .btn-today-modal { background-color: rgba(0, 122, 255, 0.1); color: var(--accent-color); border: none; padding: 6px 12px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background-color 0.2s; }
         .btn-today-modal:active { background-color: rgba(0, 122, 255, 0.2); }
 
-        .weekdays, .days { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; gap: 6px; position: relative; z-index: 1; }
-        .weekdays span { font-size: 13px; color: var(--text-secondary); font-weight: 500; margin-bottom: 10px; }
-        .days div { height: 40px; display: flex; justify-content: center; align-items: center; font-size: 18px; font-weight: 500; border-radius: 50%; cursor: pointer; transition: background-color 0.2s; }
+        /* 压缩日历网格 */
+        .weekdays, .days { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; gap: 4px; position: relative; z-index: 1; }
+        .weekdays span { font-size: 12px; color: var(--text-secondary); font-weight: 500; margin-bottom: 6px; }
+        /* 日期圆圈从 40px 缩小到 36px */
+        .days div { height: 36px; display: flex; justify-content: center; align-items: center; font-size: 17px; font-weight: 500; border-radius: 50%; cursor: pointer; transition: background-color 0.2s; }
         .days div:active { background-color: var(--segment-bg); }
         .days div.empty { cursor: default; }
         .days div.selected { background-color: var(--accent-color); color: white; font-weight: 700; box-shadow: 0 4px 10px rgba(0,122,255,0.3); }
         .days div.today:not(.selected) { color: var(--accent-color); font-weight: 700; }
 
-        /* Modal内部垂直时间拨轮防错位 */
-        .time-picker-header { display: flex; justify-content: space-between; align-items: center; margin-top: 24px; padding-top: 16px; border-top: 1px solid rgba(142, 142, 147, 0.2); }
+        /* 压缩垂直时间拨轮区 */
+        .time-picker-header { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(142, 142, 147, 0.2); }
         .time-picker-title { font-size: 13px; color: var(--text-secondary); font-weight: 600; }
-        .btn-time-zero { background-color: rgba(142, 142, 147, 0.15); color: var(--text-secondary); border: none; padding: 6px 12px; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .btn-time-zero { background-color: rgba(142, 142, 147, 0.15); color: var(--text-secondary); border: none; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; transition: 0.2s; }
         .btn-time-zero:active { background-color: rgba(142, 142, 147, 0.25); color: var(--text-main); }
 
-        .time-picker { display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 16px; }
-        .modal-time-stepper { display: flex; flex-direction: column; align-items: center; background: var(--input-bg); border-radius: 14px; width: 64px; overflow: hidden; }
-        .modal-time-btn { width: 100%; height: 28px; display: flex; justify-content: center; align-items: center; color: var(--text-secondary); cursor: pointer; transition: background-color 0.1s; }
+        .time-picker { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 10px; }
+        .modal-time-stepper { display: flex; flex-direction: column; align-items: center; background: var(--input-bg); border-radius: 12px; width: 60px; overflow: hidden; }
+        .modal-time-btn { width: 100%; height: 26px; display: flex; justify-content: center; align-items: center; color: var(--text-secondary); cursor: pointer; transition: background-color 0.1s; }
         .modal-time-btn:active { background-color: var(--stepper-btn-active); color: var(--text-main); }
         .modal-time-btn svg { width: 16px; height: 16px; }
-        .modal-time-stepper input { width: 100%; height: 36px; text-align: center; font-size: 22px; font-weight: 700; background: transparent; border: none; color: var(--text-main); outline: none; padding: 0; }
-        .time-colon { font-size: 20px; font-weight: 700; color: var(--text-secondary); padding-bottom: 2px; }
+        .modal-time-stepper input { width: 100%; height: 32px; text-align: center; font-size: 20px; font-weight: 700; background: transparent; border: none; color: var(--text-main); outline: none; padding: 0; }
+        .time-colon { font-size: 18px; font-weight: 700; color: var(--text-secondary); padding-bottom: 2px; }
 
-        .picker-actions { display: flex; gap: 16px; margin-top: 24px; }
-        .picker-btn { flex: 1; padding: 14px; border-radius: 14px; font-size: 17px; font-weight: 600; border: none; cursor: pointer; }
+        /* 压缩底部按钮区 */
+        .picker-actions { display: flex; gap: 12px; margin-top: 16px; }
+        .picker-btn { flex: 1; padding: 12px; border-radius: 12px; font-size: 16px; font-weight: 600; border: none; cursor: pointer; }
         .btn-cancel-modal { background-color: var(--input-bg); color: var(--text-main); }
         .btn-done-modal { background-color: var(--accent-color); color: white; box-shadow: 0 4px 12px rgba(0,122,255,0.3); }
     </style>
