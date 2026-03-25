@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>日期推算与换算 (Pro Max 终极版)</title>
+    <title>日期推算与换算 (Pro Max 终极完美版)</title>
     <style>
         :root {
             --bg-color: #F2F2F7;
@@ -45,7 +45,7 @@
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
 
-        /* 使用 dvh 修复移动端浏览器底部遮挡 */
+        /* 使用 dvh 确保基础容器高度正确 */
         body { background-color: var(--bg-color); color: var(--text-main); padding: 24px 16px; display: flex; justify-content: center; min-height: 100vh; min-height: 100dvh; }
         .container { width: 100%; max-width: 500px; display: flex; flex-direction: column; gap: 20px; padding-bottom: 40px; }
 
@@ -105,13 +105,14 @@
         .result-value { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.4; }
 
         /* ================= iOS 风格自定义日期选择器 ================= */
-        /* 使用 dvh 彻底解决 Safari 底部遮挡问题 */
+        /* 核心修复：纯血 100dvh 动态高度，不使用任何 translateY 强制偏移 */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; background-color: var(--modal-overlay); display: flex; justify-content: center; align-items: center; z-index: 999; opacity: 0; pointer-events: none; transition: opacity 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
         .modal-overlay.show { opacity: 1; pointer-events: auto; }
 
-        /* 核心修复：translateY(-8vh) 让弹窗物理重心整体往上移动，避开底部，利用顶部空间 */
-        .ios-picker { width: 90%; max-width: 360px; background: var(--modal-bg-light); backdrop-filter: blur(25px) saturate(180%); -webkit-backdrop-filter: blur(25px) saturate(180%); border-radius: 28px; padding: 24px 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); transform: translateY(-8vh) scale(0.95); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); border: 1px solid var(--dropdown-border); }
-        .modal-overlay.show .ios-picker { transform: translateY(-8vh) scale(1); }
+        /* 核心修复：加入 max-height: 92dvh 保证在任何小屏手机或大地址栏下都不越界，纯靠父级的 flex 居中 */
+        .ios-picker { width: 90%; max-width: 360px; max-height: 92dvh; overflow-y: auto; overscroll-behavior: none; background: var(--modal-bg-light); backdrop-filter: blur(25px) saturate(180%); -webkit-backdrop-filter: blur(25px) saturate(180%); border-radius: 28px; padding: 24px 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); transform: scale(0.95); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); border: 1px solid var(--dropdown-border); scrollbar-width: none; }
+        .ios-picker::-webkit-scrollbar { display: none; }
+        .modal-overlay.show .ios-picker { transform: scale(1); }
 
         .picker-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; position: relative; z-index: 10; }
         .dropdown-group { display: flex; gap: 6px; align-items: center; }
@@ -502,7 +503,7 @@
         document.getElementById('resultDateTime').textContent = `${outYear}年${outMonth}月${outDay}日 ${outHour}:${outMin}:${outSec}`;
     }
 
-    // ================= 模块二：日期间隔计算 (连贯中文去冒号优化) =================
+    // ================= 模块二：日期间隔计算 (连贯中文防断层) =================
     function clearDiff() {
         dates.diffStart = null;
         dates.diffEnd = null;
@@ -540,7 +541,6 @@
         let minutes = calcEnd.minute - calcStart.minute;
         let seconds = calcEnd.second - calcStart.second;
 
-        // 日历标准借位算法
         if (seconds < 0) { seconds += 60; minutes -= 1; }
         if (minutes < 0) { minutes += 60; hours -= 1; }
         if (hours < 0) { hours += 24; days -= 1; }
@@ -554,7 +554,6 @@
         }
         if (months < 0) { months += 12; years -= 1; }
 
-        // 所有单位顺序
         const allUnits = [
             { val: years, name: '年' },
             { val: months, name: '个月' },
@@ -564,7 +563,6 @@
             { val: seconds, name: '秒' }
         ];
 
-        // 寻找第一个有值的单位（作为输出的起点）
         let firstNonZero = -1;
         for (let i = 0; i < allUnits.length; i++) {
             if (allUnits[i].val > 0) {
@@ -580,7 +578,6 @@
             prefix = "";
         } else {
             let parts = [];
-            // 核心修复：从第一个有值的单位开始，一直往后渲染到“秒”，杜绝跳过单位的断层感
             for (let i = firstNonZero; i <= 5; i++) {
                 parts.push(`${allUnits[i].val}${allUnits[i].name}`);
             }
