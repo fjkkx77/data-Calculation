@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>日期推算与换算 (Pro Max 终极版)</title>
+    <style>
+        :root {
+            --bg-color: #F2F2F7;
+            --card-bg: #FFFFFF;
+            --text-main: #000000;
+            --text-secondary: #8E8E93;
+            --accent-color: #007AFF;
+            --segment-bg: #E3E3E8;
+            --input-bg: #F2F2F7;
+            --shadow-color: rgba(0, 0, 0, 0.06);
+            --modal-overlay: rgba(0, 0, 0, 0.4);
+            --modal-bg-light: rgba(255, 255, 255, 0.85);
+            --modal-bg-dark: rgba(30, 30, 30, 0.85);
+            --danger-color: #FF3B30;
+            --danger-bg: rgba(255, 59, 48, 0.1);
+            --dropdown-bg: rgba(255, 255, 255, 0.95);
+            --dropdown-border: rgba(0, 0, 0, 0.05);
+            --stepper-btn-active: rgba(0, 0, 0, 0.08);
+            --scrollbar-thumb: rgba(0, 0, 0, 0.25);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-color: #000000;
+                --card-bg: #1C1C1E;
+                --text-main: #FFFFFF;
+                --text-secondary: #EBEBF599;
+                --accent-color: #0A84FF;
+                --segment-bg: #2C2C2E;
+                --input-bg: #2C2C2E;
+                --shadow-color: rgba(0, 0, 0, 0.3);
+                --modal-overlay: rgba(0, 0, 0, 0.6);
+                --dropdown-bg: rgba(40, 40, 40, 0.95);
+                --dropdown-border: rgba(255, 255, 255, 0.1);
+                --stepper-btn-active: rgba(255, 255, 255, 0.15);
+                --scrollbar-thumb: rgba(255, 255, 255, 0.25);
+            }
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
+
+        body { background-color: var(--bg-color); color: var(--text-main); padding: 24px 16px; display: flex; justify-content: center; min-height: 100vh; }
+        .container { width: 100%; max-width: 500px; display: flex; flex-direction: column; gap: 20px; padding-bottom: 40px; }
+
+        h1 { font-size: 28px; font-weight: 800; text-align: center; margin-bottom: 4px; }
+
+        .real-time-badge { background-color: var(--card-bg); color: var(--text-main); padding: 10px 16px; border-radius: 20px; text-align: center; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px var(--shadow-color); align-self: center; }
+        .real-time-badge span { color: var(--accent-color); font-variant-numeric: tabular-nums; }
+
+        .card { background-color: var(--card-bg); border-radius: 20px; padding: 20px; box-shadow: 0 8px 24px var(--shadow-color); }
+        
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .section-title { font-size: 14px; color: var(--text-secondary); font-weight: 600; }
+        
+        .btn-section-reset { background-color: rgba(142, 142, 147, 0.15); color: var(--accent-color); border: none; padding: 6px 12px; border-radius: 12px; font-size: 12px; font-weight: 700; cursor: pointer; transition: background-color 0.2s; display: flex; align-items: center; gap: 4px; }
+        .btn-section-reset:active { background-color: rgba(142, 142, 147, 0.25); }
+
+        .input-label { font-size: 13px; color: var(--text-secondary); font-weight: 600; margin-bottom: 8px; display: block; }
+        
+        .custom-datetime-trigger { width: 100%; padding: 16px; font-size: 18px; font-weight: 600; border-radius: 14px; background-color: var(--input-bg); color: var(--text-main); margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: opacity 0.2s; }
+        .custom-datetime-trigger:active { opacity: 0.7; }
+        .placeholder { color: var(--text-secondary); font-weight: 400; }
+
+        .action-row { display: flex; gap: 12px; }
+        .btn-half { flex: 1; padding: 14px; border-radius: 12px; font-size: 16px; font-weight: 600; border: none; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 6px; transition: background-color 0.2s; }
+        .btn-clear { background-color: var(--danger-bg); color: var(--danger-color); }
+        .btn-now { background-color: rgba(0, 122, 255, 0.1); color: var(--accent-color); }
+        .btn-half:active { filter: brightness(0.9); }
+
+        .segmented-control { display: flex; background-color: var(--segment-bg); border-radius: 12px; padding: 4px; margin-bottom: 20px; }
+        .segment { flex: 1; text-align: center; padding: 10px 0; font-size: 15px; font-weight: 600; cursor: pointer; border-radius: 10px; color: var(--text-secondary); transition: all 0.25s; }
+        .segment.active { background-color: var(--card-bg); color: var(--text-main); box-shadow: 0 4px 10px rgba(0,0,0,0.08); }
+
+        /* 推算卡片网格 (3列) */
+        .duration-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+        
+        /* 换算卡片网格 (2列) */
+        .convert-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+
+        .stepper-group { display: flex; flex-direction: column; align-items: center; }
+        .stepper-group label { font-size: 13px; color: var(--text-secondary); font-weight: 600; margin-bottom: 8px; }
+        
+        .stepper-control { display: flex; align-items: center; background-color: var(--input-bg); border-radius: 12px; width: 100%; height: 44px; overflow: hidden; transition: box-shadow 0.2s; }
+        .stepper-control:focus-within { box-shadow: 0 0 0 2px var(--accent-color); }
+        
+        /* 强制隐藏所有原生数字箭头 */
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none !important; margin: 0 !important; }
+        input[type="number"] { -moz-appearance: textfield !important; }
+        
+        .stepper-control input { flex: 1; width: 100%; text-align: center; font-size: 20px; font-weight: 700; border: none; background: transparent; color: var(--text-main); outline: none; padding: 0; }
+        .stepper-btn { width: 36px; height: 100%; display: flex; justify-content: center; align-items: center; font-size: 20px; font-weight: 500; color: var(--accent-color); background: transparent; border: none; cursor: pointer; transition: background-color 0.15s; }
+        .stepper-btn:active { background-color: var(--stepper-btn-active); }
+
+        .convert-control { display: flex; align-items: center; background-color: var(--input-bg); border-radius: 12px; width: 100%; height: 44px; overflow: hidden; transition: box-shadow 0.2s; }
+        .convert-control:focus-within { box-shadow: 0 0 0 2px var(--accent-color); }
+        .convert-control input { flex: 1; width: 100%; text-align: center; font-size: 18px; font-weight: 700; border: none; background: transparent; color: var(--text-main); outline: none; padding: 0 8px; font-variant-numeric: tabular-nums; }
+
+        .result-card { text-align: center; padding: 30px 16px; background: linear-gradient(135deg, var(--accent-color), #5E5CE6); color: white; border-radius: 20px; box-shadow: 0 10px 30px rgba(0, 122, 255, 0.3); }
+        .result-label { font-size: 14px; opacity: 0.9; margin-bottom: 8px; font-weight: 500; }
+        .result-value { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.4; }
+
+        /* ================= iOS 风格自定义日期选择器 ================= */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: var(--modal-overlay); display: flex; justify-content: center; align-items: center; z-index: 999; opacity: 0; pointer-events: none; transition: opacity 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
+        .modal-overlay.show { opacity: 1; pointer-events: auto; }
+
+        .ios-picker { width: 90%; max-width: 360px; background: var(--modal-bg-light); backdrop-filter: blur(25px) saturate(180%); -webkit-backdrop-filter: blur(25px) saturate(180%); border-radius: 28px; padding: 24px 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); transform: scale(0.95); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); border: 1px solid var(--dropdown-border); }
+        .modal-overlay.show .ios-picker { transform: scale(1); }
+
+        .picker-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; position: relative; z-index: 10; }
+        .dropdown-group { display: flex; gap: 6px; align-items: center; }
+        
+        .custom-select { position: relative; }
+        .select-btn { background: rgba(142, 142, 147, 0.12); padding: 6px 10px; border-radius: 8px; font-size: 18px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 4px; cursor: pointer; transition: background 0.2s; }
+        .select-btn:active { background: rgba(142, 142, 147, 0.25); }
+        .select-btn::after { content: "▾"; font-size: 14px; color: var(--text-secondary); }
+
+        .select-menu { position: absolute; top: calc(100% + 8px); left: 0; background: var(--dropdown-bg); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); border: 1px solid var(--dropdown-border); border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); max-height: 220px; overflow-y: auto; overflow-x: hidden; min-width: 100px; z-index: 100; opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.95); transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1); scrollbar-width: thin; scrollbar-color: var(--scrollbar-thumb) transparent; }
+        .select-menu.show { opacity: 1; pointer-events: auto; transform: translateY(0) scale(1); }
+        .select-menu::-webkit-scrollbar { width: 5px; }
+        .select-menu::-webkit-scrollbar-track { background: transparent; margin: 6px 0; }
+        .select-menu::-webkit-scrollbar-thumb { background-color: var(--scrollbar-thumb); border-radius: 10px; }
+        
+        .select-item { padding: 12px 16px; font-size: 17px; font-weight: 500; text-align: center; color: var(--text-main); border-bottom: 1px solid var(--dropdown-border); cursor: pointer; transition: background 0.1s; }
+        .select-item:last-child { border-bottom: none; }
+        .select-item:active { background: var(--segment-bg); }
+        .select-item.selected { color: var(--accent-color); font-weight: 700; background: rgba(0, 122, 255, 0.08); }
+
+        .btn-today-modal { background-color: rgba(0, 122, 255, 0.1); color: var(--accent-color); border: none; padding: 6px 12px; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; transition: background-color 0.2s; }
+        .btn-today-modal:active { background-color: rgba(0, 122, 255, 0.2); }
+
+        .weekdays, .days { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; gap: 6px; position: relative; z-index: 1; }
+        .weekdays span { font-size: 13px; color: var(--text-secondary); font-weight: 500; margin-bottom: 10px; }
+        .days div { height: 40px; display: flex; justify-content: center; align-items: center; font-size: 18px; font-weight: 500; border-radius: 50%; cursor: pointer; transition: background-color 0.2s; }
+        .days div:active { background-color: var(--segment-bg); }
+        .days div.empty { cursor: default; }
+        .days div.selected { background-color: var(--accent-color); color: white; font-weight: 700; box-shadow: 0 4px 10px rgba(0,122,255,0.3); }
+        .days div.today:not(.selected) { color: var(--accent-color); font-weight: 700; }
+
+        /* Modal内部垂直时间拨轮 */
+        .time-picker-header { display: flex; justify-content: space-between; align-items: center; margin-top: 24px; padding-top: 16px; border-top: 1px solid rgba(142, 142, 147, 0.2); }
+        .time-picker-title { font-size: 13px; color: var(--text-secondary); font-weight: 600; }
+        .btn-time-zero { background-color: rgba(142, 142, 147, 0.15); color: var(--text-secondary); border: none; padding: 6px 12px; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .btn-time-zero:active { background-color: rgba(142, 142, 147, 0.25); color: var(--text-main); }
+
+        .time-picker { display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 16px; }
+        .modal-time-stepper { display: flex; flex-direction: column; align-items: center; background: var(--input-bg); border-radius: 14px; width: 64px; overflow: hidden; }
+        .modal-time-btn { width: 100%; height: 28px; display: flex; justify-content: center; align-items: center; color: var(--text-secondary); cursor: pointer; transition: background-color 0.1s; }
+        .modal-time-btn:active { background-color: var(--stepper-btn-active); color: var(--text-main); }
+        .modal-time-btn svg { width: 16px; height: 16px; }
+        .modal-time-stepper input { width: 100%; height: 36px; text-align: center; font-size: 22px; font-weight: 700; background: transparent; border: none; color: var(--text-main); outline: none; padding: 0; }
+        .time-colon { font-size: 20px; font-weight: 700; color: var(--text-secondary); padding-bottom: 2px; }
+
+        .picker-actions { display: flex; gap: 16px; margin-top: 24px; }
+        .picker-btn { flex: 1; padding: 14px; border-radius: 14px; font-size: 17px; font-weight: 600; border: none; cursor: pointer; }
+        .btn-cancel-modal { background-color: var(--input-bg); color: var(--text-main); }
+        .btn-done-modal { background-color: var(--accent-color); color: white; box-shadow: 0 4px 12px rgba(0,122,255,0.3); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="real-time-badge">当前北京时间：<span id="realTimeClock">--</span></div>
+
+    <div class="card">
+        <div class="section-header" style="margin-bottom: 16px;">
+            <div class="section-title">基准时间 (推算起点)</div>
+        </div>
+        
+        <div class="custom-datetime-trigger" id="baseTrigger" onclick="openModal('base')">
+            <span class="placeholder">请选择时间...</span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+        </div>
+
+        <div class="action-row">
+            <button class="btn-half btn-clear" onclick="clearTime()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                清除
+            </button>
+            <button class="btn-half btn-now" onclick="setBaseToNow()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                当前时刻
+            </button>
+        </div>
+
+        <div class="section-header" style="margin-top: 24px;">
+            <div class="section-title">调整时间</div>
+            <button class="btn-section-reset" onclick="resetAdjustments()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><polyline points="3 3 3 8 8 8"></polyline></svg>
+                归零
+            </button>
+        </div>
+        
+        <div class="segmented-control">
+            <div class="segment active" id="modeAdd" onclick="setMode('add')">往后推 ( + )</div>
+            <div class="segment" id="modeSub" onclick="setMode('subtract')">往前推 ( - )</div>
+        </div>
+        
+        <div class="duration-grid">
+            <div class="stepper-group">
+                <label>年</label>
+                <div class="stepper-control">
+                    <button class="stepper-btn" onclick="stepValue('valY', -1)">−</button>
+                    <input type="number" id="valY" value="0" min="0" oninput="calculate()" onfocus="this.select()">
+                    <button class="stepper-btn" onclick="stepValue('valY', 1)">+</button>
+                </div>
+            </div>
+            <div class="stepper-group">
+                <label>月</label>
+                <div class="stepper-control">
+                    <button class="stepper-btn" onclick="stepValue('valM', -1)">−</button>
+                    <input type="number" id="valM" value="0" min="0" oninput="calculate()" onfocus="this.select()">
+                    <button class="stepper-btn" onclick="stepValue('valM', 1)">+</button>
+                </div>
+            </div>
+            <div class="stepper-group">
+                <label>日</label>
+                <div class="stepper-control">
+                    <button class="stepper-btn" onclick="stepValue('valD', -1)">−</button>
+                    <input type="number" id="valD" value="0" min="0" oninput="calculate()" onfocus="this.select()">
+                    <button class="stepper-btn" onclick="stepValue('valD', 1)">+</button>
+                </div>
+            </div>
+            <div class="stepper-group">
+                <label>时</label>
+                <div class="stepper-control">
+                    <button class="stepper-btn" onclick="stepValue('valh', -1)">−</button>
+                    <input type="number" id="valh" value="0" min="0" oninput="calculate()" onfocus="this.select()">
+                    <button class="stepper-btn" onclick="stepValue('valh', 1)">+</button>
+                </div>
+            </div>
+            <div class="stepper-group">
+                <label>分</label>
+                <div class="stepper-control">
+                    <button class="stepper-btn" onclick="stepValue('valm', -1)">−</button>
+                    <input type="number" id="valm" value="0" min="0" oninput="calculate()" onfocus="this.select()">
+                    <button class="stepper-btn" onclick="stepValue('valm', 1)">+</button>
+                </div>
+            </div>
+            <div class="stepper-group">
+                <label>秒</label>
+                <div class="stepper-control">
+                    <button class="stepper-btn" onclick="stepValue('vals', -1)">−</button>
+                    <input type="number" id="vals" value="0" min="0" oninput="calculate()" onfocus="this.select()">
+                    <button class="stepper-btn" onclick="stepValue('vals', 1)">+</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="result-card" style="margin-top: 16px;">
+            <div class="result-label">最终推算结果</div>
+            <div class="result-value" id="resultDateTime">--</div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="section-header">
+            <div class="section-title">日期时间间隔</div>
+            <button class="btn-section-reset" onclick="clearDiff()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><polyline points="3 3 3 8 8 8"></polyline></svg>
+                清空
+            </button>
+        </div>
+        
+        <label class="input-label">开始时间</label>
+        <div class="custom-datetime-trigger" id="diffStartTrigger" onclick="openModal('diffStart')">
+            <span class="placeholder">请选择开始时间...</span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+        </div>
+
+        <label class="input-label">结束时间</label>
+        <div class="custom-datetime-trigger" id="diffEndTrigger" onclick="openModal('diffEnd')">
+            <span class="placeholder">请选择结束时间...</span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+        </div>
+
+        <div class="result-card" style="margin-top: 8px;">
+            <div class="result-label">精确相差间隔</div>
+            <div class="result-value" id="diffResultValue" style="font-size: 19px;">--</div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="section-header">
+            <div class="section-title">时间单位全自动换算</div>
+            <button class="btn-section-reset" onclick="resetConverter()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><polyline points="3 3 3 8 8 8"></polyline></svg>
+                归零
+            </button>
+        </div>
+        
+        <div class="convert-grid">
+            <div class="stepper-group">
+                <label>年</label>
+                <div class="convert-control">
+                    <input type="number" id="convY" value="0" min="0" step="any" oninput="runConversion('Y')" onfocus="this.select()">
+                </div>
+            </div>
+            <div class="stepper-group">
+                <label>月</label>
+                <div class="convert-control">
+                    <input type="number" id="convM" value="0" min="0" step="any" oninput="runConversion('M')" onfocus="this.select()">
+                </div>
+            </div>
+            <div class="stepper-group">
+                <label>周</label>
+                <div class="convert-control">
+                    <input type="number" id="convW" value="0" min="0" step="any" oninput="runConversion('W')" onfocus="this.select()">
+                </div>
+            </div>
+            <div class="stepper-group">
+                <label>日</label>
+                <div class="convert-control">
+                    <input type="number" id="convD" value="0" min="0" step="any" oninput="runConversion('D')" onfocus="this.select()">
+                </div>
+            </div>
+            <div class="stepper-group">
+                <label>时</label>
+                <div class="convert-control">
+                    <input type="number" id="convH" value="0" min="0" step="any" oninput="runConversion('H')" onfocus="this.select()">
+                </div>
+            </div>
+            <div class="stepper-group">
+                <label>分</label>
+                <div class="convert-control">
+                    <input type="number" id="convMin" value="0" min="0" step="any" oninput="runConversion('Min')" onfocus="this.select()">
+                </div>
+            </div>
+            <div class="stepper-group">
+                <label>秒</label>
+                <div class="convert-control">
+                    <input type="number" id="convS" value="0" min="0" step="any" oninput="runConversion('S')" onfocus="this.select()">
+                </div>
+            </div>
+            <div class="stepper-group">
+                <label>睡眠周期 (90分)</label>
+                <div class="convert-control">
+                    <input type="number" id="convCycle" value="0" min="0" step="any" oninput="runConversion('Cycle')" onfocus="this.select()">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="datePickerModal">
+    <div class="ios-picker" onclick="closeAllDropdowns(event)">
+        <div class="picker-header">
+            <div class="dropdown-group">
+                <div class="custom-select" id="yearSelectWrapper">
+                    <div class="select-btn" onclick="toggleDropdown(event, 'yearMenu')"><span id="yearDisplay">2026</span>年</div>
+                    <div class="select-menu" id="yearMenu"></div>
+                </div>
+                <div class="custom-select" id="monthSelectWrapper">
+                    <div class="select-btn" onclick="toggleDropdown(event, 'monthMenu')"><span id="monthDisplay">3</span>月</div>
+                    <div class="select-menu" id="monthMenu"></div>
+                </div>
+            </div>
+            <div class="picker-nav">
+                <button class="btn-today-modal" onclick="jumpToTodayModal()">今天</button>
+            </div>
+        </div>
+        
+        <div class="weekdays"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>
+        <div class="days" id="modalDays"></div>
+        
+        <div class="time-picker-header">
+            <div class="time-picker-title">精确时间</div>
+            <button class="btn-time-zero" onclick="resetModalTime()">一键归零</button>
+        </div>
+
+        <div class="time-picker">
+            <div class="modal-time-stepper">
+                <div class="modal-time-btn" onclick="stepModalTime('modalH', 1, 23)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg></div>
+                <input type="number" id="modalH" min="0" max="23" onblur="padModalInput(this, 23)">
+                <div class="modal-time-btn" onclick="stepModalTime('modalH', -1, 23)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></div>
+            </div>
+            <span class="time-colon">:</span>
+            <div class="modal-time-stepper">
+                <div class="modal-time-btn" onclick="stepModalTime('modalM', 1, 59)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg></div>
+                <input type="number" id="modalM" min="0" max="59" onblur="padModalInput(this, 59)">
+                <div class="modal-time-btn" onclick="stepModalTime('modalM', -1, 59)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></div>
+            </div>
+            <span class="time-colon">:</span>
+            <div class="modal-time-stepper">
+                <div class="modal-time-btn" onclick="stepModalTime('modalS', 1, 59)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg></div>
+                <input type="number" id="modalS" min="0" max="59" onblur="padModalInput(this, 59)">
+                <div class="modal-time-btn" onclick="stepModalTime('modalS', -1, 59)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></div>
+            </div>
+        </div>
+
+        <div class="picker-actions">
+            <button class="picker-btn btn-cancel-modal" onclick="closeModal()">取消</button>
+            <button class="picker-btn btn-done-modal" onclick="confirmModal()">完成</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ================= 核心状态管理 =================
+    const dates = { base: null, diffStart: null, diffEnd: null };
+    
+    let currentMode = 'add';
+    let currentModalTarget = 'base';
+    
+    let viewYear = 2026;
+    let viewMonth = 3; 
+    let selectedDay = 1;
+
+    // ================= 基础工具 =================
+    function getBeijingTimeObj() {
+        const now = new Date();
+        const formatter = new Intl.DateTimeFormat('en-US', {
+            timeZone: 'Asia/Shanghai', year: 'numeric', month: 'numeric', day: 'numeric',
+            hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: false
+        });
+        const parts = formatter.formatToParts(now);
+        const p = {};
+        parts.forEach(part => p[part.type] = part.value);
+        if (p.hour === '24') p.hour = '00';
+        return {
+            year: parseInt(p.year), month: parseInt(p.month), day: parseInt(p.day),
+            hour: parseInt(p.hour), minute: parseInt(p.minute), second: parseInt(p.second)
+        };
+    }
+
+    setInterval(() => {
+        const bj = getBeijingTimeObj();
+        document.getElementById('realTimeClock').textContent = 
+            `${bj.year}-${String(bj.month).padStart(2,'0')}-${String(bj.day).padStart(2,'0')} ${String(bj.hour).padStart(2,'0')}:${String(bj.minute).padStart(2,'0')}:${String(bj.second).padStart(2,'0')}`;
+    }, 1000);
+
+    function formatDateTimeHtml(obj, placeholderText) {
+        const svgIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>`;
+        if (!obj) return `<span class="placeholder">${placeholderText}</span>` + svgIcon;
+        const text = `${obj.year}年${String(obj.month).padStart(2,'0')}月${String(obj.day).padStart(2,'0')}日 ${String(obj.hour).padStart(2,'0')}:${String(obj.minute).padStart(2,'0')}:${String(obj.second).padStart(2,'0')}`;
+        return `<span>${text}</span>` + svgIcon;
+    }
+
+    // ================= 模块一：日期推算控制 =================
+    function setBaseToNow() {
+        dates.base = getBeijingTimeObj();
+        document.getElementById('baseTrigger').innerHTML = formatDateTimeHtml(dates.base, '请选择时间...');
+        calculate();
+    }
+
+    function clearTime() {
+        dates.base = null;
+        document.getElementById('baseTrigger').innerHTML = formatDateTimeHtml(null, '请选择时间...');
+        document.getElementById('resultDateTime').textContent = "--";
+    }
+
+    function resetAdjustments() {
+        const ids = ['valY', 'valM', 'valD', 'valh', 'valm', 'vals'];
+        ids.forEach(id => { document.getElementById(id).value = 0; });
+        calculate();
+    }
+
+    function stepValue(id, delta) {
+        const input = document.getElementById(id);
+        let val = parseInt(input.value, 10);
+        if (isNaN(val)) val = 0;
+        val += delta;
+        if (val < 0) val = 0; 
+        input.value = val;
+        calculate(); 
+    }
+
+    function setMode(mode) {
+        currentMode = mode;
+        document.getElementById('modeAdd').classList.remove('active');
+        document.getElementById('modeSub').classList.remove('active');
+        document.getElementById(mode === 'add' ? 'modeAdd' : 'modeSub').classList.add('active');
+        calculate();
+    }
+
+    function getVal(id) { const val = parseInt(document.getElementById(id).value, 10); return isNaN(val) ? 0 : val; }
+
+    function calculate() {
+        if (!dates.base) { document.getElementById('resultDateTime').textContent = "--"; return; }
+        let calcDate = new Date(Date.UTC(dates.base.year, dates.base.month - 1, dates.base.day, dates.base.hour, dates.base.minute, dates.base.second));
+        let multi = currentMode === 'add' ? 1 : -1;
+        calcDate.setUTCFullYear(calcDate.getUTCFullYear() + (getVal('valY') * multi));
+        calcDate.setUTCMonth(calcDate.getUTCMonth() + (getVal('valM') * multi));
+        calcDate.setUTCDate(calcDate.getUTCDate() + (getVal('valD') * multi));
+        calcDate.setUTCHours(calcDate.getUTCHours() + (getVal('valh') * multi));
+        calcDate.setUTCMinutes(calcDate.getUTCMinutes() + (getVal('valm') * multi));
+        calcDate.setUTCSeconds(calcDate.getUTCSeconds() + (getVal('vals') * multi));
+
+        const outYear = calcDate.getUTCFullYear();
+        const outMonth = String(calcDate.getUTCMonth() + 1).padStart(2, '0');
+        const outDay = String(calcDate.getUTCDate()).padStart(2, '0');
+        const outHour = String(calcDate.getUTCHours()).padStart(2, '0');
+        const outMin = String(calcDate.getUTCMinutes()).padStart(2, '0');
+        const outSec = String(calcDate.getUTCSeconds()).padStart(2, '0');
+
+        document.getElementById('resultDateTime').textContent = `${outYear}年${outMonth}月${outDay}日 ${outHour}:${outMin}:${outSec}`;
+    }
+
+    // ================= 模块二：日期间隔计算 (完美中文化 + 强制连贯单位) =================
+    function clearDiff() {
+        dates.diffStart = null;
+        dates.diffEnd = null;
+        document.getElementById('diffStartTrigger').innerHTML = formatDateTimeHtml(null, '请选择开始时间...');
+        document.getElementById('diffEndTrigger').innerHTML = formatDateTimeHtml(null, '请选择结束时间...');
+        document.getElementById('diffResultValue').textContent = "--";
+    }
+
+    function calculateDiff() {
+        if (!dates.diffStart || !dates.diffEnd) {
+            document.getElementById('diffResultValue').textContent = "--";
+            return;
+        }
+
+        let start = dates.diffStart;
+        let end = dates.diffEnd;
+        let isNegative = false;
+
+        let d1 = new Date(Date.UTC(start.year, start.month-1, start.day, start.hour, start.minute, start.second));
+        let d2 = new Date(Date.UTC(end.year, end.month-1, end.day, end.hour, end.minute, end.second));
+
+        let calcStart = {...start};
+        let calcEnd = {...end};
+
+        if (d1 > d2) {
+            calcStart = {...end};
+            calcEnd = {...start};
+            isNegative = true;
+        }
+
+        let years = calcEnd.year - calcStart.year;
+        let months = calcEnd.month - calcStart.month;
+        let days = calcEnd.day - calcStart.day;
+        let hours = calcEnd.hour - calcStart.hour;
+        let minutes = calcEnd.minute - calcStart.minute;
+        let seconds = calcEnd.second - calcStart.second;
+
+        if (seconds < 0) { seconds += 60; minutes -= 1; }
+        if (minutes < 0) { minutes += 60; hours -= 1; }
+        if (hours < 0) { hours += 24; days -= 1; }
+        if (days < 0) {
+            let prevMonth = calcEnd.month - 1;
+            let prevYear = calcEnd.year;
+            if (prevMonth === 0) { prevMonth = 12; prevYear -= 1; }
+            let daysInPrevMonth = new Date(Date.UTC(prevYear, prevMonth, 0)).getUTCDate();
+            days += daysInPrevMonth;
+            months -= 1;
+        }
+        if (months < 0) { months += 12; years -= 1; }
+
+        // 所有单位层级集合
+        const allUnits = [
+            { val: years, name: '年' },
+            { val: months, name: '个月' },
+            { val: days, name: '天' },
+            { val: hours, name: '小时' },
+            { val: minutes, name: '分钟' },
+            { val: seconds, name: '秒' }
+        ];
+
+        let firstNonZero = -1;
+        for (let i = 0; i < allUnits.length; i++) {
+            if (allUnits[i].val > 0) {
+                if (firstNonZero === -1) firstNonZero = i;
+            }
+        }
+
+        let fullStr = "";
+        let prefix = isNegative ? "相差 (反向) " : "相差 ";
+
+        if (firstNonZero === -1) {
+            fullStr = "时间完全相同";
+            prefix = "";
+        } else {
+            let parts = [];
+            // 核心修复逻辑：从第一个有值的单位开始，一直渲染到最精度的“秒”(索引5)
+            // 保证形如 “2天18小时0分钟1秒” 这种首尾连贯不跳脱的体验
+            for (let i = firstNonZero; i <= 5; i++) {
+                parts.push(`${allUnits[i].val}${allUnits[i].name}`);
+            }
+            fullStr = parts.join(''); 
+        }
+
+        document.getElementById('diffResultValue').textContent = prefix + fullStr;
+    }
+
+    // ================= 模块三：全自动换算器 =================
+    const CONV_RATES = {
+        Y: 31536000,
+        M: 2628000,
+        W: 604800,
+        D: 86400,
+        H: 3600,
+        Min: 60,
+        S: 1,
+        Cycle: 5400
+    };
+
+    function runConversion(sourceUnit) {
+        const inputStr = document.getElementById('conv' + sourceUnit).value;
+        let val = parseFloat(inputStr);
+        if (isNaN(val)) val = 0;
+
+        let baseSeconds = val * CONV_RATES[sourceUnit];
+
+        const units = ['Y', 'M', 'W', 'D', 'H', 'Min', 'S', 'Cycle'];
+        units.forEach(unit => {
+            if (unit !== sourceUnit) {
+                let converted = baseSeconds / CONV_RATES[unit];
+                let formatted = parseFloat(converted.toFixed(5)); 
+                document.getElementById('conv' + unit).value = formatted;
+            }
+        });
+    }
+
+    function resetConverter() {
+        const units = ['Y', 'M', 'W', 'D', 'H', 'Min', 'S', 'Cycle'];
+        units.forEach(unit => { document.getElementById('conv' + unit).value = 0; });
+    }
+
+    // ================= 全局 Modal 与日历逻辑 =================
+    function populateDropdowns() {
+        const yearMenu = document.getElementById('yearMenu');
+        const monthMenu = document.getElementById('monthMenu');
+        let yearHtml = ''; let monthHtml = '';
+        for(let i = 1000; i <= 3000; i++) { yearHtml += `<div class="select-item" id="y-${i}" onclick="selectCustomYear(${i})">${i}</div>`; }
+        for(let i = 1; i <= 12; i++) { monthHtml += `<div class="select-item" id="m-${i}" onclick="selectCustomMonth(${i})">${i}</div>`; }
+        yearMenu.innerHTML = yearHtml; monthMenu.innerHTML = monthHtml;
+    }
+
+    function toggleDropdown(event, menuId) {
+        event.stopPropagation();
+        const menu = document.getElementById(menuId);
+        const isShowing = menu.classList.contains('show');
+        closeAllDropdowns(event);
+        if (!isShowing) {
+            menu.classList.add('show');
+            const activeId = menuId === 'yearMenu' ? `y-${viewYear}` : `m-${viewMonth}`;
+            const activeItem = document.getElementById(activeId);
+            if (activeItem) activeItem.scrollIntoView({ block: "center", behavior: "instant" });
+        }
+    }
+
+    function closeAllDropdowns(event) {
+        document.getElementById('yearMenu').classList.remove('show');
+        document.getElementById('monthMenu').classList.remove('show');
+    }
+
+    function selectCustomYear(y) { viewYear = y; renderCalendar(); }
+    function selectCustomMonth(m) { viewMonth = m; renderCalendar(); }
+
+    function updateDropdownUI() {
+        document.getElementById('yearDisplay').textContent = viewYear;
+        document.getElementById('monthDisplay').textContent = viewMonth;
+        document.querySelectorAll('#yearMenu .select-item').forEach(el => el.classList.remove('selected'));
+        document.querySelectorAll('#monthMenu .select-item').forEach(el => el.classList.remove('selected'));
+        const yItem = document.getElementById(`y-${viewYear}`);
+        const mItem = document.getElementById(`m-${viewMonth}`);
+        if(yItem) yItem.classList.add('selected');
+        if(mItem) mItem.classList.add('selected');
+    }
+
+    function stepModalTime(id, delta, maxVal) {
+        const input = document.getElementById(id);
+        let val = parseInt(input.value, 10);
+        if (isNaN(val)) val = 0;
+        val += delta;
+        if (val > maxVal) val = 0;      
+        if (val < 0) val = maxVal;      
+        input.value = String(val).padStart(2, '0');
+    }
+
+    function padModalInput(input, maxVal) {
+        let val = parseInt(input.value, 10);
+        if (isNaN(val)) val = 0;
+        if (val > maxVal) val = maxVal;
+        if (val < 0) val = 0;
+        input.value = String(val).padStart(2, '0');
+    }
+
+    function resetModalTime() {
+        document.getElementById('modalH').value = '00';
+        document.getElementById('modalM').value = '00';
+        document.getElementById('modalS').value = '00';
+    }
+
+    function openModal(target) {
+        currentModalTarget = target;
+        let initDate = dates[target] ? {...dates[target]} : getBeijingTimeObj();
+        
+        viewYear = initDate.year; 
+        viewMonth = initDate.month; 
+        selectedDay = initDate.day;
+        
+        document.getElementById('modalH').value = String(initDate.hour).padStart(2, '0');
+        document.getElementById('modalM').value = String(initDate.minute).padStart(2, '0');
+        document.getElementById('modalS').value = String(initDate.second).padStart(2, '0');
+        
+        renderCalendar();
+        document.getElementById('datePickerModal').classList.add('show');
+    }
+
+    function closeModal() {
+        document.getElementById('datePickerModal').classList.remove('show');
+        closeAllDropdowns(new Event('click'));
+    }
+
+    function jumpToTodayModal() {
+        const today = getBeijingTimeObj();
+        viewYear = today.year; viewMonth = today.month; selectedDay = today.day;
+        document.getElementById('modalH').value = String(today.hour).padStart(2, '0');
+        document.getElementById('modalM').value = String(today.minute).padStart(2, '0');
+        document.getElementById('modalS').value = String(today.second).padStart(2, '0');
+        renderCalendar();
+    }
+
+    function selectDay(day) { selectedDay = day; renderCalendar(); }
+
+    function renderCalendar() {
+        updateDropdownUI(); 
+        const firstDayDate = new Date(Date.UTC(viewYear, viewMonth - 1, 1));
+        let startDayOfWeek = firstDayDate.getUTCDay(); 
+        startDayOfWeek = startDayOfWeek === 0 ? 7 : startDayOfWeek; 
+        const daysInMonth = new Date(Date.UTC(viewYear, viewMonth, 0)).getUTCDate();
+        const actualToday = getBeijingTimeObj();
+        const isCurrentMonthYear = (actualToday.year === viewYear && actualToday.month === viewMonth);
+        const daysContainer = document.getElementById('modalDays');
+        daysContainer.innerHTML = '';
+
+        for (let i = 1; i < startDayOfWeek; i++) { daysContainer.innerHTML += `<div class="empty"></div>`; }
+        for (let i = 1; i <= daysInMonth; i++) {
+            const isSelected = (i === selectedDay);
+            const isActualToday = (isCurrentMonthYear && i === actualToday.day);
+            let classNames = [];
+            if (isSelected) classNames.push('selected');
+            if (isActualToday) classNames.push('today');
+            daysContainer.innerHTML += `<div class="${classNames.join(' ')}" onclick="selectDay(${i})">${i}</div>`;
+        }
+    }
+
+    function confirmModal() {
+        const h = parseInt(document.getElementById('modalH').value) || 0;
+        const m = parseInt(document.getElementById('modalM').value) || 0;
+        const s = parseInt(document.getElementById('modalS').value) || 0;
+        
+        dates[currentModalTarget] = { year: viewYear, month: viewMonth, day: selectedDay, hour: Math.min(23, h), minute: Math.min(59, m), second: Math.min(59, s) };
+        
+        const triggerId = currentModalTarget + 'Trigger';
+        const placeholderText = currentModalTarget.includes('Start') ? '请选择开始时间...' : (currentModalTarget.includes('End') ? '请选择结束时间...' : '请选择时间...');
+        document.getElementById(triggerId).innerHTML = formatDateTimeHtml(dates[currentModalTarget], placeholderText);
+        
+        closeModal();
+
+        if (currentModalTarget === 'base') calculate();
+        else calculateDiff();
+    }
+
+    window.onload = () => { populateDropdowns(); setBaseToNow(); };
+</script>
+
+</body>
+</html>
