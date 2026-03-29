@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>日期推算与换算 (Pro Max 终极完美版)</title>
+    <title>日期推算与换算 (Pro Max 终极大满贯版)</title>
     <style>
         :root {
             --bg-color: #F2F2F7;
@@ -46,8 +46,9 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
 
         /* 使用 dvh 确保基础容器高度正确 */
-        body { background-color: var(--bg-color); color: var(--text-main); padding: 20px 16px; display: flex; justify-content: center; min-height: 100vh; min-height: 100dvh; }
-        .container { width: 100%; max-width: 500px; display: flex; flex-direction: column; gap: 20px; padding-bottom: 40px; }
+        body { background-color: var(--bg-color); color: var(--text-main); padding: 24px 16px; display: flex; justify-content: center; min-height: 100vh; min-height: 100dvh; }
+        /* 增加底部 padding，防止键盘弹起时页面最底部的内容无法滚上来 */
+        .container { width: 100%; max-width: 500px; display: flex; flex-direction: column; gap: 20px; padding-bottom: 80px; }
 
         h1 { font-size: 28px; font-weight: 800; text-align: center; margin-bottom: 4px; }
 
@@ -78,7 +79,10 @@
         .segment { flex: 1; text-align: center; padding: 10px 0; font-size: 15px; font-weight: 600; cursor: pointer; border-radius: 10px; color: var(--text-secondary); transition: all 0.25s; }
         .segment.active { background-color: var(--card-bg); color: var(--text-main); box-shadow: 0 4px 10px rgba(0,0,0,0.08); }
 
+        /* 推算卡片网格 (3列) */
         .duration-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+        
+        /* 换算卡片网格 (2列，防止小数被挤压) */
         .convert-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
 
         .stepper-group { display: flex; flex-direction: column; align-items: center; }
@@ -96,73 +100,89 @@
         .stepper-btn { width: 36px; height: 100%; display: flex; justify-content: center; align-items: center; font-size: 20px; font-weight: 500; color: var(--accent-color); background: transparent; border: none; cursor: pointer; transition: background-color 0.15s; }
         .stepper-btn:active { background-color: var(--stepper-btn-active); }
 
+        /* 换算专用输入框：无加减按钮，字体略小以防小数过长 */
         .convert-control { display: flex; align-items: center; background-color: var(--input-bg); border-radius: 12px; width: 100%; height: 44px; overflow: hidden; transition: box-shadow 0.2s; }
         .convert-control:focus-within { box-shadow: 0 0 0 2px var(--accent-color); }
         .convert-control input { flex: 1; width: 100%; text-align: center; font-size: 18px; font-weight: 700; border: none; background: transparent; color: var(--text-main); outline: none; padding: 0 8px; font-variant-numeric: tabular-nums; }
 
-        .result-card { text-align: center; padding: 30px 16px; background: linear-gradient(135deg, var(--accent-color), #5E5CE6); color: white; border-radius: 20px; box-shadow: 0 10px 30px rgba(0, 122, 255, 0.3); }
+        .result-card { text-align: center; padding: 24px 16px; background: linear-gradient(135deg, var(--accent-color), #5E5CE6); color: white; border-radius: 20px; box-shadow: 0 10px 30px rgba(0, 122, 255, 0.3); }
         .result-label { font-size: 14px; opacity: 0.9; margin-bottom: 8px; font-weight: 500; }
-        .result-value { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.4; }
+        .result-value { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.4; }
+
+        /* ================= 新增：间隔结果卡片内的折合总计网格 ================= */
+        .diff-totals-grid { 
+            display: none; 
+            grid-template-columns: repeat(3, 1fr); 
+            gap: 10px; 
+            margin-top: 20px; 
+            padding-top: 20px; 
+            border-top: 1px solid rgba(255, 255, 255, 0.2); 
+        }
+        .diff-total-item { 
+            background: rgba(255, 255, 255, 0.15); 
+            border-radius: 12px; 
+            padding: 10px 6px; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+        }
+        .diff-total-label { font-size: 12px; opacity: 0.85; margin-bottom: 4px; font-weight: 500; letter-spacing: 0.5px;}
+        .diff-total-val { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
 
         /* ================= iOS 风格自定义日期选择器 ================= */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; background-color: var(--modal-overlay); display: flex; justify-content: center; align-items: center; z-index: 999; opacity: 0; pointer-events: none; transition: opacity 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
         .modal-overlay.show { opacity: 1; pointer-events: auto; }
 
-        /* 核心修复：极限压缩 padding，保证小屏绝对不遮挡 */
-        .ios-picker { width: 90%; max-width: 360px; max-height: 94dvh; overflow-y: auto; overscroll-behavior: none; background: var(--modal-bg-light); backdrop-filter: blur(25px) saturate(180%); -webkit-backdrop-filter: blur(25px) saturate(180%); border-radius: 24px; padding: 16px 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); transform: scale(0.95); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); border: 1px solid var(--dropdown-border); scrollbar-width: none; }
+        .ios-picker { width: 90%; max-width: 360px; max-height: 94dvh; overflow-y: auto; overscroll-behavior: none; background: var(--modal-bg-light); backdrop-filter: blur(25px) saturate(180%); -webkit-backdrop-filter: blur(25px) saturate(180%); border-radius: 28px; padding: 24px 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); transform: scale(0.95); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); border: 1px solid var(--dropdown-border); scrollbar-width: none; }
         .ios-picker::-webkit-scrollbar { display: none; }
         .modal-overlay.show .ios-picker { transform: scale(1); }
 
-        /* 压缩头部间距 */
-        .picker-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; position: relative; z-index: 10; }
+        .picker-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; position: relative; z-index: 10; }
         .dropdown-group { display: flex; gap: 6px; align-items: center; }
         
         .custom-select { position: relative; }
-        .select-btn { background: rgba(142, 142, 147, 0.12); padding: 4px 8px; border-radius: 8px; font-size: 17px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 4px; cursor: pointer; transition: background 0.2s; }
+        .select-btn { background: rgba(142, 142, 147, 0.12); padding: 6px 10px; border-radius: 8px; font-size: 18px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 4px; cursor: pointer; transition: background 0.2s; }
         .select-btn:active { background: rgba(142, 142, 147, 0.25); }
         .select-btn::after { content: "▾"; font-size: 14px; color: var(--text-secondary); }
 
-        .select-menu { position: absolute; top: calc(100% + 8px); left: 0; background: var(--dropdown-bg); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); border: 1px solid var(--dropdown-border); border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); max-height: 200px; overflow-y: auto; overflow-x: hidden; min-width: 100px; z-index: 100; opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.95); transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1); scrollbar-width: thin; scrollbar-color: var(--scrollbar-thumb) transparent; }
+        .select-menu { position: absolute; top: calc(100% + 8px); left: 0; background: var(--dropdown-bg); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); border: 1px solid var(--dropdown-border); border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); max-height: 220px; overflow-y: auto; overflow-x: hidden; min-width: 100px; z-index: 100; opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.95); transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1); scrollbar-width: thin; scrollbar-color: var(--scrollbar-thumb) transparent; }
         .select-menu.show { opacity: 1; pointer-events: auto; transform: translateY(0) scale(1); }
         .select-menu::-webkit-scrollbar { width: 5px; }
         .select-menu::-webkit-scrollbar-track { background: transparent; margin: 6px 0; }
         .select-menu::-webkit-scrollbar-thumb { background-color: var(--scrollbar-thumb); border-radius: 10px; }
         
-        .select-item { padding: 10px 16px; font-size: 16px; font-weight: 500; text-align: center; color: var(--text-main); border-bottom: 1px solid var(--dropdown-border); cursor: pointer; transition: background 0.1s; }
+        .select-item { padding: 12px 16px; font-size: 17px; font-weight: 500; text-align: center; color: var(--text-main); border-bottom: 1px solid var(--dropdown-border); cursor: pointer; transition: background 0.1s; }
         .select-item:last-child { border-bottom: none; }
         .select-item:active { background: var(--segment-bg); }
         .select-item.selected { color: var(--accent-color); font-weight: 700; background: rgba(0, 122, 255, 0.08); }
 
-        .btn-today-modal { background-color: rgba(0, 122, 255, 0.1); color: var(--accent-color); border: none; padding: 6px 12px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background-color 0.2s; }
+        .btn-today-modal { background-color: rgba(0, 122, 255, 0.1); color: var(--accent-color); border: none; padding: 6px 12px; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; transition: background-color 0.2s; }
         .btn-today-modal:active { background-color: rgba(0, 122, 255, 0.2); }
 
-        /* 压缩日历网格 */
-        .weekdays, .days { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; gap: 4px; position: relative; z-index: 1; }
-        .weekdays span { font-size: 12px; color: var(--text-secondary); font-weight: 500; margin-bottom: 6px; }
-        /* 日期圆圈从 40px 缩小到 36px */
-        .days div { height: 36px; display: flex; justify-content: center; align-items: center; font-size: 17px; font-weight: 500; border-radius: 50%; cursor: pointer; transition: background-color 0.2s; }
+        .weekdays, .days { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; gap: 6px; position: relative; z-index: 1; }
+        .weekdays span { font-size: 13px; color: var(--text-secondary); font-weight: 500; margin-bottom: 10px; }
+        .days div { height: 40px; display: flex; justify-content: center; align-items: center; font-size: 18px; font-weight: 500; border-radius: 50%; cursor: pointer; transition: background-color 0.2s; }
         .days div:active { background-color: var(--segment-bg); }
         .days div.empty { cursor: default; }
         .days div.selected { background-color: var(--accent-color); color: white; font-weight: 700; box-shadow: 0 4px 10px rgba(0,122,255,0.3); }
         .days div.today:not(.selected) { color: var(--accent-color); font-weight: 700; }
 
-        /* 压缩垂直时间拨轮区 */
-        .time-picker-header { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(142, 142, 147, 0.2); }
+        /* Modal内部垂直时间拨轮防错位 */
+        .time-picker-header { display: flex; justify-content: space-between; align-items: center; margin-top: 24px; padding-top: 16px; border-top: 1px solid rgba(142, 142, 147, 0.2); }
         .time-picker-title { font-size: 13px; color: var(--text-secondary); font-weight: 600; }
-        .btn-time-zero { background-color: rgba(142, 142, 147, 0.15); color: var(--text-secondary); border: none; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .btn-time-zero { background-color: rgba(142, 142, 147, 0.15); color: var(--text-secondary); border: none; padding: 6px 12px; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.2s; }
         .btn-time-zero:active { background-color: rgba(142, 142, 147, 0.25); color: var(--text-main); }
 
-        .time-picker { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 10px; }
-        .modal-time-stepper { display: flex; flex-direction: column; align-items: center; background: var(--input-bg); border-radius: 12px; width: 60px; overflow: hidden; }
-        .modal-time-btn { width: 100%; height: 26px; display: flex; justify-content: center; align-items: center; color: var(--text-secondary); cursor: pointer; transition: background-color 0.1s; }
+        .time-picker { display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 16px; }
+        .modal-time-stepper { display: flex; flex-direction: column; align-items: center; background: var(--input-bg); border-radius: 14px; width: 64px; overflow: hidden; }
+        .modal-time-btn { width: 100%; height: 28px; display: flex; justify-content: center; align-items: center; color: var(--text-secondary); cursor: pointer; transition: background-color 0.1s; }
         .modal-time-btn:active { background-color: var(--stepper-btn-active); color: var(--text-main); }
         .modal-time-btn svg { width: 16px; height: 16px; }
-        .modal-time-stepper input { width: 100%; height: 32px; text-align: center; font-size: 20px; font-weight: 700; background: transparent; border: none; color: var(--text-main); outline: none; padding: 0; }
-        .time-colon { font-size: 18px; font-weight: 700; color: var(--text-secondary); padding-bottom: 2px; }
+        .modal-time-stepper input { width: 100%; height: 36px; text-align: center; font-size: 22px; font-weight: 700; background: transparent; border: none; color: var(--text-main); outline: none; padding: 0; }
+        .time-colon { font-size: 20px; font-weight: 700; color: var(--text-secondary); padding-bottom: 2px; }
 
-        /* 压缩底部按钮区 */
-        .picker-actions { display: flex; gap: 12px; margin-top: 16px; }
-        .picker-btn { flex: 1; padding: 12px; border-radius: 12px; font-size: 16px; font-weight: 600; border: none; cursor: pointer; }
+        .picker-actions { display: flex; gap: 16px; margin-top: 24px; }
+        .picker-btn { flex: 1; padding: 14px; border-radius: 14px; font-size: 17px; font-weight: 600; border: none; cursor: pointer; }
         .btn-cancel-modal { background-color: var(--input-bg); color: var(--text-main); }
         .btn-done-modal { background-color: var(--accent-color); color: white; box-shadow: 0 4px 12px rgba(0,122,255,0.3); }
     </style>
@@ -211,7 +231,7 @@
                 <label>年</label>
                 <div class="stepper-control">
                     <button class="stepper-btn" onclick="stepValue('valY', -1)">−</button>
-                    <input type="number" id="valY" value="0" min="0" oninput="calculate()" onfocus="this.select()">
+                    <input type="number" id="valY" value="0" min="0" oninput="calculate()">
                     <button class="stepper-btn" onclick="stepValue('valY', 1)">+</button>
                 </div>
             </div>
@@ -219,7 +239,7 @@
                 <label>月</label>
                 <div class="stepper-control">
                     <button class="stepper-btn" onclick="stepValue('valM', -1)">−</button>
-                    <input type="number" id="valM" value="0" min="0" oninput="calculate()" onfocus="this.select()">
+                    <input type="number" id="valM" value="0" min="0" oninput="calculate()">
                     <button class="stepper-btn" onclick="stepValue('valM', 1)">+</button>
                 </div>
             </div>
@@ -227,7 +247,7 @@
                 <label>日</label>
                 <div class="stepper-control">
                     <button class="stepper-btn" onclick="stepValue('valD', -1)">−</button>
-                    <input type="number" id="valD" value="0" min="0" oninput="calculate()" onfocus="this.select()">
+                    <input type="number" id="valD" value="0" min="0" oninput="calculate()">
                     <button class="stepper-btn" onclick="stepValue('valD', 1)">+</button>
                 </div>
             </div>
@@ -235,7 +255,7 @@
                 <label>时</label>
                 <div class="stepper-control">
                     <button class="stepper-btn" onclick="stepValue('valh', -1)">−</button>
-                    <input type="number" id="valh" value="0" min="0" oninput="calculate()" onfocus="this.select()">
+                    <input type="number" id="valh" value="0" min="0" oninput="calculate()">
                     <button class="stepper-btn" onclick="stepValue('valh', 1)">+</button>
                 </div>
             </div>
@@ -243,7 +263,7 @@
                 <label>分</label>
                 <div class="stepper-control">
                     <button class="stepper-btn" onclick="stepValue('valm', -1)">−</button>
-                    <input type="number" id="valm" value="0" min="0" oninput="calculate()" onfocus="this.select()">
+                    <input type="number" id="valm" value="0" min="0" oninput="calculate()">
                     <button class="stepper-btn" onclick="stepValue('valm', 1)">+</button>
                 </div>
             </div>
@@ -251,7 +271,7 @@
                 <label>秒</label>
                 <div class="stepper-control">
                     <button class="stepper-btn" onclick="stepValue('vals', -1)">−</button>
-                    <input type="number" id="vals" value="0" min="0" oninput="calculate()" onfocus="this.select()">
+                    <input type="number" id="vals" value="0" min="0" oninput="calculate()">
                     <button class="stepper-btn" onclick="stepValue('vals', 1)">+</button>
                 </div>
             </div>
@@ -285,8 +305,35 @@
         </div>
 
         <div class="result-card" style="margin-top: 8px;">
-            <div class="result-label">精确相差间隔</div>
+            <div class="result-label">精确层级间隔</div>
             <div class="result-value" id="diffResultValue" style="font-size: 19px;">--</div>
+            
+            <div class="diff-totals-grid" id="diffTotalsGrid">
+                <div class="diff-total-item">
+                    <div class="diff-total-label">折合总年数</div>
+                    <div class="diff-total-val" id="totY">0</div>
+                </div>
+                <div class="diff-total-item">
+                    <div class="diff-total-label">折合总月数</div>
+                    <div class="diff-total-val" id="totM">0</div>
+                </div>
+                <div class="diff-total-item">
+                    <div class="diff-total-label">折合总天数</div>
+                    <div class="diff-total-val" id="totD">0</div>
+                </div>
+                <div class="diff-total-item">
+                    <div class="diff-total-label">折合总时数</div>
+                    <div class="diff-total-val" id="totH">0</div>
+                </div>
+                <div class="diff-total-item">
+                    <div class="diff-total-label">折合总分数</div>
+                    <div class="diff-total-val" id="totMin">0</div>
+                </div>
+                <div class="diff-total-item">
+                    <div class="diff-total-label">折合总秒数</div>
+                    <div class="diff-total-val" id="totS">0</div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -303,49 +350,49 @@
             <div class="stepper-group">
                 <label>年</label>
                 <div class="convert-control">
-                    <input type="number" id="convY" value="0" min="0" step="any" oninput="runConversion('Y')" onfocus="this.select()">
+                    <input type="number" id="convY" value="0" min="0" step="any" oninput="runConversion('Y')">
                 </div>
             </div>
             <div class="stepper-group">
                 <label>月</label>
                 <div class="convert-control">
-                    <input type="number" id="convM" value="0" min="0" step="any" oninput="runConversion('M')" onfocus="this.select()">
+                    <input type="number" id="convM" value="0" min="0" step="any" oninput="runConversion('M')">
                 </div>
             </div>
             <div class="stepper-group">
                 <label>周</label>
                 <div class="convert-control">
-                    <input type="number" id="convW" value="0" min="0" step="any" oninput="runConversion('W')" onfocus="this.select()">
+                    <input type="number" id="convW" value="0" min="0" step="any" oninput="runConversion('W')">
                 </div>
             </div>
             <div class="stepper-group">
                 <label>日</label>
                 <div class="convert-control">
-                    <input type="number" id="convD" value="0" min="0" step="any" oninput="runConversion('D')" onfocus="this.select()">
+                    <input type="number" id="convD" value="0" min="0" step="any" oninput="runConversion('D')">
                 </div>
             </div>
             <div class="stepper-group">
                 <label>时</label>
                 <div class="convert-control">
-                    <input type="number" id="convH" value="0" min="0" step="any" oninput="runConversion('H')" onfocus="this.select()">
+                    <input type="number" id="convH" value="0" min="0" step="any" oninput="runConversion('H')">
                 </div>
             </div>
             <div class="stepper-group">
                 <label>分</label>
                 <div class="convert-control">
-                    <input type="number" id="convMin" value="0" min="0" step="any" oninput="runConversion('Min')" onfocus="this.select()">
+                    <input type="number" id="convMin" value="0" min="0" step="any" oninput="runConversion('Min')">
                 </div>
             </div>
             <div class="stepper-group">
                 <label>秒</label>
                 <div class="convert-control">
-                    <input type="number" id="convS" value="0" min="0" step="any" oninput="runConversion('S')" onfocus="this.select()">
+                    <input type="number" id="convS" value="0" min="0" step="any" oninput="runConversion('S')">
                 </div>
             </div>
             <div class="stepper-group">
                 <label>睡眠周期 (90分)</label>
                 <div class="convert-control">
-                    <input type="number" id="convCycle" value="0" min="0" step="any" oninput="runConversion('Cycle')" onfocus="this.select()">
+                    <input type="number" id="convCycle" value="0" min="0" step="any" oninput="runConversion('Cycle')">
                 </div>
             </div>
         </div>
@@ -506,18 +553,20 @@
         document.getElementById('resultDateTime').textContent = `${outYear}年${outMonth}月${outDay}日 ${outHour}:${outMin}:${outSec}`;
     }
 
-    // ================= 模块二：日期间隔计算 (连贯中文防断层) =================
+    // ================= 模块二：日期间隔计算 (包含折合面板) =================
     function clearDiff() {
         dates.diffStart = null;
         dates.diffEnd = null;
         document.getElementById('diffStartTrigger').innerHTML = formatDateTimeHtml(null, '请选择开始时间...');
         document.getElementById('diffEndTrigger').innerHTML = formatDateTimeHtml(null, '请选择结束时间...');
         document.getElementById('diffResultValue').textContent = "--";
+        document.getElementById('diffTotalsGrid').style.display = 'none';
     }
 
     function calculateDiff() {
         if (!dates.diffStart || !dates.diffEnd) {
             document.getElementById('diffResultValue').textContent = "--";
+            document.getElementById('diffTotalsGrid').style.display = 'none';
             return;
         }
 
@@ -537,6 +586,7 @@
             isNegative = true;
         }
 
+        // --- 1. 计算层级间隔 ---
         let years = calcEnd.year - calcStart.year;
         let months = calcEnd.month - calcStart.month;
         let days = calcEnd.day - calcStart.day;
@@ -588,6 +638,28 @@
         }
 
         document.getElementById('diffResultValue').textContent = prefix + fullStr;
+
+        // --- 2. 计算精准折合总计数据 ---
+        let diffMs = Math.abs(d2.getTime() - d1.getTime());
+        
+        let totS = diffMs / 1000;
+        let totMin = totS / 60;
+        let totH = totMin / 60;
+        let totD = totH / 24;
+        let totM = totD / 30.4166667; 
+        let totY = totD / 365;
+
+        // 智能去零：保留 3 位小数
+        const fmt = val => parseFloat(val.toFixed(3));
+
+        document.getElementById('totS').textContent = fmt(totS);
+        document.getElementById('totMin').textContent = fmt(totMin);
+        document.getElementById('totH').textContent = fmt(totH);
+        document.getElementById('totD').textContent = fmt(totD);
+        document.getElementById('totM').textContent = fmt(totM);
+        document.getElementById('totY').textContent = fmt(totY);
+
+        document.getElementById('diffTotalsGrid').style.display = 'grid';
     }
 
     // ================= 模块三：全自动换算器 =================
@@ -761,7 +833,24 @@
         else calculateDiff();
     }
 
-    window.onload = () => { populateDropdowns(); setBaseToNow(); };
+    // ================= 彻底解决移动端键盘遮挡的杀手锏 =================
+    function initKeyboardFix() {
+        const inputs = document.querySelectorAll('input[type="number"]');
+        inputs.forEach(input => {
+            input.addEventListener('focus', function() {
+                // 等待键盘完全升起 (通常需要 250-300ms)
+                setTimeout(() => {
+                    this.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 300);
+            });
+        });
+    }
+
+    window.onload = () => { 
+        populateDropdowns(); 
+        setBaseToNow(); 
+        initKeyboardFix(); // 页面加载后立即注入防遮挡逻辑
+    };
 </script>
 
 </body>
