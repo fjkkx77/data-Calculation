@@ -16,7 +16,9 @@
 ---
 
 ## 🖼️ 项目预览
-（后续可直接拖拽上传项目截图，替换本行即可）
+<img width="452" height="534" alt="PixPin_2026-04-01_08-34-38" src="https://github.com/user-attachments/assets/315a7235-1485-421a-a254-0df6ab0930bd" />
+<img width="441" height="633" alt="PixPin_2026-04-01_08-34-55" src="https://github.com/user-attachments/assets/53a71388-d4be-4e3d-8ccb-2d0f593200a0" />
+
 
 ---
 
