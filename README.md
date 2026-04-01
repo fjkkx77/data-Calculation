@@ -1,9 +1,9 @@
 # Date Calculator 📅
-> 简单高效的日期推算工具，支持日期差计算、前后日期推算，无广告、无追踪，解决你所有的日期计算需求。
+> 简单高效的日期推算工具，支持日期差计算、前后日期推算、睡眠周期计算，无广告、无追踪，解决你所有的日期计算需求。
 
-[![GitHub stars](https://img.shields.io/github/stars/fjkkx77/date-calculator?style=social)](https://github.com/fjkkx77/date-calculator/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/fjkkx77/date-calculator?style=social)](https://github.com/fjkkx77/date-calculator/network/members)
-[![在线Demo](https://img.shields.io/badge/在线Demo-点击访问-brightgreen)](https://fjkkx77.github.io/date-calculator/)
+[![GitHub stars](https://img.shields.io/github/stars/fjkkx77/data-Calculation?style=social)](https://github.com/fjkkx77/data-Calculation/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/fjkkx77/data-Calculation?style=social)](https://github.com/fjkkx77/data-Calculation/network/members)
+[![在线Demo](https://img.shields.io/badge/在线Demo-点击访问-brightgreen)](https://fjkkx77.github.io/data-Calculation/)
 
 ---
 
@@ -12,17 +12,17 @@
 - ⏰ **前后日期推算**：输入起始日期和天数，快速推算出 N 天前/后的具体日期
 - 🎨 **简洁无干扰**：无广告、无用户追踪，界面清爽，操作简单
 - 📱 **全终端响应式**：电脑、平板、手机都能完美适配
-
+- 😴 **睡眠周期计算**：支持将小时转换为睡眠周期单位
 ---
 
 ## 🖼️ 项目预览
-（后续可补充项目截图）
+（后续可直接拖拽上传项目截图，替换本行即可）
 
 ---
 
 ## 🚀 快速开始
 ### 方式一：直接在线使用（推荐）
-点击 [在线Demo](https://fjkkx77.github.io/date-calculator/) 即可直接使用，无需任何安装配置。
+点击 [在线Demo](https://fjkkx77.github.io/data-Calculation/) 即可直接使用，无需任何安装配置。
 
 ### 方式二：一键部署到自己的 GitHub Pages
 1.  点击页面右上角的 **Fork** 按钮，把本仓库复刻到你自己的GitHub账号下
@@ -40,7 +40,6 @@
 ## 🛠️ 技术栈
 - 原生 HTML5 + CSS3 + JavaScript
 - 日期处理：[Day.js](https://day.js.org/)
-- 农历转换：[LunarCalendar](https://github.com/6tail/lunar-javascript)
 
 ---
 
@@ -50,12 +49,13 @@
 - ✅ 支持日期差计算（天数/周数/月数/年数）
 - ✅ 支持前后日期推算
 - ✅ 全终端响应式适配
+- ✅ 睡眠周期计算
 
 ---
 
 ## 🤝 贡献指南
 欢迎提交 Issue 和 Pull Request！
-- 发现 Bug 或有功能建议，欢迎提交 [Issue](https://github.com/fjkkx77/date-calculator/issues)
+- 发现 Bug 或有功能建议，欢迎提交 [Issue](https://github.com/fjkkx77/data-Calculation/issues)
 - 想贡献代码，Fork 仓库后提交 PR 即可
 
 ---
