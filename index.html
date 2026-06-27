@@ -104,38 +104,40 @@
 
         /* ================= 核心修复：折合总计数据看板防偏移 ================= */
         .diff-totals-grid { 
-            display: none; 
+            display: none;
             /* 强制绝对等分 3 列，无视内部文字多宽，确保绝对居中 */
-            grid-template-columns: repeat(3, minmax(0, 1fr)); 
+            grid-template-columns: repeat(3, minmax(0, 1fr));
             width: 100%;
             gap: 8px; 
             margin-top: 20px; 
             padding-top: 20px; 
-            border-top: 1px solid rgba(255, 255, 255, 0.2); 
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
         }
         .diff-total-item { 
-            background: rgba(255, 255, 255, 0.15); 
+            background: rgba(255, 255, 255, 0.15);
             border-radius: 12px; 
             padding: 8px 2px; /* 压缩 padding，为数字腾空间 */
-            display: flex; 
+            display: flex;
             flex-direction: column; 
             align-items: center; 
             justify-content: center;
             overflow: hidden; /* 防止溢出边界 */
         }
         .diff-total-label { 
-            font-size: 11px; 
+            font-size: 11px;
             opacity: 0.85; 
             margin-bottom: 4px; 
             font-weight: 500; 
             white-space: nowrap; /* 强制标题不换行 */
-            transform: scale(0.95); /* 缩放防拥挤 */
+            transform: scale(0.95);
+            /* 缩放防拥挤 */
         }
         .diff-total-val { 
-            font-size: 14px; /* 字号略微调小保证长数字能放下 */
+            font-size: 14px;
+            /* 字号略微调小保证长数字能放下 */
             font-weight: 700; 
             font-variant-numeric: tabular-nums; 
-            width: 100%; 
+            width: 100%;
             text-align: center; 
             word-wrap: break-word; /* 极其长的数字允许换行 */
         }
@@ -296,14 +298,20 @@
     <div class="card">
         <div class="section-header">
             <div class="section-title">日期时间间隔</div>
-            <button class="btn-section-reset" onclick="clearDiff()">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><polyline points="3 3 3 8 8 8"></polyline></svg>
-                清空
-            </button>
+            <div style="display: flex; gap: 8px;">
+                <button class="btn-section-reset" onclick="setDiffStartToNow()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    当前时刻
+                </button>
+                <button class="btn-section-reset" onclick="clearDiff()" style="color: var(--danger-color); background-color: var(--danger-bg);">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><polyline points="3 3 3 8 8 8"></polyline></svg>
+                    清空
+                </button>
+            </div>
         </div>
         
         <label class="input-label">开始时间</label>
-        <div class="custom-datetime-trigger" id="diffStartTrigger" onclick="openModal('diffStart')">
+        <div class="custom-datetime-trigger" id="diffStartTrigger" onclick="openModal('diffStart')" style="margin-bottom: 16px;">
             <span class="placeholder">请选择开始时间...</span>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
         </div>
@@ -465,7 +473,6 @@
 <script>
     // ================= 核心状态管理 =================
     const dates = { base: null, diffStart: null, diffEnd: null };
-    
     let currentMode = 'add';
     let currentModalTarget = 'base';
     
@@ -527,7 +534,7 @@
         let val = parseInt(input.value, 10);
         if (isNaN(val)) val = 0;
         val += delta;
-        if (val < 0) val = 0; 
+        if (val < 0) val = 0;
         input.value = val;
         calculate(); 
     }
@@ -543,7 +550,8 @@
     function getVal(id) { const val = parseInt(document.getElementById(id).value, 10); return isNaN(val) ? 0 : val; }
 
     function calculate() {
-        if (!dates.base) { document.getElementById('resultDateTime').textContent = "--"; return; }
+        if (!dates.base) { document.getElementById('resultDateTime').textContent = "--";
+        return; }
         let calcDate = new Date(Date.UTC(dates.base.year, dates.base.month - 1, dates.base.day, dates.base.hour, dates.base.minute, dates.base.second));
         let multi = currentMode === 'add' ? 1 : -1;
         calcDate.setUTCFullYear(calcDate.getUTCFullYear() + (getVal('valY') * multi));
@@ -552,7 +560,6 @@
         calcDate.setUTCHours(calcDate.getUTCHours() + (getVal('valh') * multi));
         calcDate.setUTCMinutes(calcDate.getUTCMinutes() + (getVal('valm') * multi));
         calcDate.setUTCSeconds(calcDate.getUTCSeconds() + (getVal('vals') * multi));
-
         const outYear = calcDate.getUTCFullYear();
         const outMonth = String(calcDate.getUTCMonth() + 1).padStart(2, '0');
         const outDay = String(calcDate.getUTCDate()).padStart(2, '0');
@@ -563,7 +570,32 @@
         document.getElementById('resultDateTime').textContent = `${outYear}年${outMonth}月${outDay}日 ${outHour}:${outMin}:${outSec}`;
     }
 
-    // ================= 模块二：日期间隔计算 =================
+    // ================= 模块二：日期间隔计算新增/修改功能 =================
+    
+    // 给右上角按钮使用：将开始和结束时间都设置为当前时刻
+    function setBothDiffToNow() {
+        const now = getBeijingTimeObj();
+        dates.diffStart = {...now};
+        dates.diffEnd = {...now};
+        document.getElementById('diffStartTrigger').innerHTML = formatDateTimeHtml(dates.diffStart, '请选择开始时间...');
+        document.getElementById('diffEndTrigger').innerHTML = formatDateTimeHtml(dates.diffEnd, '请选择结束时间...');
+        calculateDiff();
+    }
+
+    // 给开始时间大按钮使用：仅将开始时间设置为当前时刻
+    function setDiffStartToNow() {
+        dates.diffStart = getBeijingTimeObj();
+        document.getElementById('diffStartTrigger').innerHTML = formatDateTimeHtml(dates.diffStart, '请选择开始时间...');
+        calculateDiff();
+    }
+
+    // 给开始时间大按钮使用：仅清除开始时间
+    function clearDiffStart() {
+        dates.diffStart = null;
+        document.getElementById('diffStartTrigger').innerHTML = formatDateTimeHtml(null, '请选择开始时间...');
+        calculateDiff();
+    }
+
     function clearDiff() {
         dates.diffStart = null;
         dates.diffEnd = null;
@@ -589,7 +621,6 @@
 
         let calcStart = {...start};
         let calcEnd = {...end};
-
         if (d1 > d2) {
             calcStart = {...end};
             calcEnd = {...start};
@@ -624,7 +655,6 @@
             { val: minutes, name: '分钟' },
             { val: seconds, name: '秒' }
         ];
-
         let firstNonZero = -1;
         for (let i = 0; i < allUnits.length; i++) {
             if (allUnits[i].val > 0) {
@@ -634,7 +664,6 @@
 
         let fullStr = "";
         let prefix = isNegative ? "相差(反向) " : "相差 ";
-
         if (firstNonZero === -1) {
             fullStr = "时间完全相同";
             prefix = "";
@@ -643,20 +672,18 @@
             for (let i = firstNonZero; i <= 5; i++) {
                 parts.push(`${allUnits[i].val}${allUnits[i].name}`);
             }
-            fullStr = parts.join(''); 
+            fullStr = parts.join('');
         }
 
         document.getElementById('diffResultValue').textContent = prefix + fullStr;
 
         let diffMs = Math.abs(d2.getTime() - d1.getTime());
-        
         let totS = diffMs / 1000;
         let totMin = totS / 60;
         let totH = totMin / 60;
         let totD = totH / 24;
         let totM = totD / 30.4166667; 
         let totY = totD / 365;
-
         const fmt = val => parseFloat(val.toFixed(3));
 
         document.getElementById('totS').textContent = fmt(totS);
@@ -680,14 +707,12 @@
         S: 1,
         Cycle: 5400
     };
-
     function runConversion(sourceUnit) {
         const inputStr = document.getElementById('conv' + sourceUnit).value;
         let val = parseFloat(inputStr);
         if (isNaN(val)) val = 0;
 
         let baseSeconds = val * CONV_RATES[sourceUnit];
-
         const units = ['Y', 'M', 'W', 'D', 'H', 'Min', 'S', 'Cycle'];
         units.forEach(unit => {
             if (unit !== sourceUnit) {
@@ -708,8 +733,10 @@
         const yearMenu = document.getElementById('yearMenu');
         const monthMenu = document.getElementById('monthMenu');
         let yearHtml = ''; let monthHtml = '';
-        for(let i = 1000; i <= 3000; i++) { yearHtml += `<div class="select-item" id="y-${i}" onclick="selectCustomYear(${i})">${i}</div>`; }
-        for(let i = 1; i <= 12; i++) { monthHtml += `<div class="select-item" id="m-${i}" onclick="selectCustomMonth(${i})">${i}</div>`; }
+        for(let i = 1000; i <= 3000; i++) { yearHtml += `<div class="select-item" id="y-${i}" onclick="selectCustomYear(${i})">${i}</div>`;
+        }
+        for(let i = 1; i <= 12; i++) { monthHtml += `<div class="select-item" id="m-${i}" onclick="selectCustomMonth(${i})">${i}</div>`;
+        }
         yearMenu.innerHTML = yearHtml; monthMenu.innerHTML = monthHtml;
     }
 
@@ -750,7 +777,7 @@
         let val = parseInt(input.value, 10);
         if (isNaN(val)) val = 0;
         val += delta;
-        if (val > maxVal) val = 0;      
+        if (val > maxVal) val = 0;
         if (val < 0) val = maxVal;      
         input.value = String(val).padStart(2, '0');
     }
@@ -776,7 +803,6 @@
         viewYear = initDate.year; 
         viewMonth = initDate.month; 
         selectedDay = initDate.day;
-        
         document.getElementById('modalH').value = String(initDate.hour).padStart(2, '0');
         document.getElementById('modalM').value = String(initDate.minute).padStart(2, '0');
         document.getElementById('modalS').value = String(initDate.second).padStart(2, '0');
@@ -802,7 +828,7 @@
     function selectDay(day) { selectedDay = day; renderCalendar(); }
 
     function renderCalendar() {
-        updateDropdownUI(); 
+        updateDropdownUI();
         const firstDayDate = new Date(Date.UTC(viewYear, viewMonth - 1, 1));
         let startDayOfWeek = firstDayDate.getUTCDay(); 
         startDayOfWeek = startDayOfWeek === 0 ? 7 : startDayOfWeek; 
@@ -811,8 +837,8 @@
         const isCurrentMonthYear = (actualToday.year === viewYear && actualToday.month === viewMonth);
         const daysContainer = document.getElementById('modalDays');
         daysContainer.innerHTML = '';
-
-        for (let i = 1; i < startDayOfWeek; i++) { daysContainer.innerHTML += `<div class="empty"></div>`; }
+        for (let i = 1; i < startDayOfWeek; i++) { daysContainer.innerHTML += `<div class="empty"></div>`;
+        }
         for (let i = 1; i <= daysInMonth; i++) {
             const isSelected = (i === selectedDay);
             const isActualToday = (isCurrentMonthYear && i === actualToday.day);
@@ -827,9 +853,7 @@
         const h = parseInt(document.getElementById('modalH').value) || 0;
         const m = parseInt(document.getElementById('modalM').value) || 0;
         const s = parseInt(document.getElementById('modalS').value) || 0;
-        
         dates[currentModalTarget] = { year: viewYear, month: viewMonth, day: selectedDay, hour: Math.min(23, h), minute: Math.min(59, m), second: Math.min(59, s) };
-        
         const triggerId = currentModalTarget + 'Trigger';
         const placeholderText = currentModalTarget.includes('Start') ? '请选择开始时间...' : (currentModalTarget.includes('End') ? '请选择结束时间...' : '请选择时间...');
         document.getElementById(triggerId).innerHTML = formatDateTimeHtml(dates[currentModalTarget], placeholderText);
@@ -851,9 +875,10 @@
         });
     }
 
-    window.onload = () => { 
-        populateDropdowns(); 
-        setBaseToNow(); 
+    window.onload = () => {
+        populateDropdowns();
+        setBaseToNow();
+        setDiffStartToNow();
         initKeyboardFix();
     };
 </script>
