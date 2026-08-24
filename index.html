@@ -82,6 +82,12 @@
 
         .stepper-group { display: flex; flex-direction: column; align-items: center; }
         .stepper-group label { font-size: 13px; color: var(--text-secondary); font-weight: 600; margin-bottom: 8px; }
+
+        /* 睡眠周期跟年月日时分秒不是同一量纲，单独占满一行并标注换算关系 */
+        .sleep-cycle-group { grid-column: 1 / -1; margin-top: 4px; }
+        .sleep-cycle-group label { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; }
+        .sleep-hint { font-size: 12px; font-weight: 500; color: var(--text-secondary); opacity: 0.75; }
+        .sleep-total { font-size: 12px; font-weight: 600; color: var(--accent-color); margin-top: 6px; min-height: 16px; }
         
         .stepper-control { display: flex; align-items: center; background-color: var(--input-bg); border-radius: 12px; width: 100%; height: 44px; overflow: hidden; transition: box-shadow 0.2s; }
         .stepper-control:focus-within { box-shadow: 0 0 0 2px var(--accent-color); }
@@ -286,6 +292,15 @@
                     <input type="number" id="vals" value="0" min="0" oninput="calculate()">
                     <button class="stepper-btn" onclick="stepValue('vals', 1)">+</button>
                 </div>
+            </div>
+            <div class="stepper-group sleep-cycle-group">
+                <label>睡眠周期 <span class="sleep-hint">1 周期 = 90 分钟</span></label>
+                <div class="stepper-control">
+                    <button class="stepper-btn" onclick="stepValue('valSleep', -1)">−</button>
+                    <input type="number" id="valSleep" value="0" min="0" oninput="calculate()">
+                    <button class="stepper-btn" onclick="stepValue('valSleep', 1)">+</button>
+                </div>
+                <div class="sleep-total" id="sleepTotal"></div>
             </div>
         </div>
 
@@ -522,8 +537,11 @@
         document.getElementById('resultDateTime').textContent = "--";
     }
 
+    // 一个睡眠周期按 90 分钟计（通行的近似值，实际因人而异）
+    const SLEEP_CYCLE_MINUTES = 90;
+
     function resetAdjustments() {
-        const ids = ['valY', 'valM', 'valD', 'valh', 'valm', 'vals'];
+        const ids = ['valY', 'valM', 'valD', 'valh', 'valm', 'vals', 'valSleep'];
         ids.forEach(id => { document.getElementById(id).value = 0; });
         calculate();
     }
@@ -538,6 +556,19 @@
         calculate(); 
     }
 
+    // 把周期数换算成小时/分钟显示在步进器下方，省得心算 90 的倍数
+    function updateSleepTotal() {
+        const el = document.getElementById('sleepTotal');
+        if (!el) return;
+        const cycles = getVal('valSleep');
+        if (cycles <= 0) { el.textContent = ''; return; }
+        const totalMin = cycles * SLEEP_CYCLE_MINUTES;
+        const h = Math.floor(totalMin / 60);
+        const m = totalMin % 60;
+        const sign = currentMode === 'add' ? '+' : '−';
+        el.textContent = `${sign} ${cycles} 个周期 = ${h} 小时${m ? ` ${m} 分钟` : ''}`;
+    }
+
     function setMode(mode) {
         currentMode = mode;
         document.getElementById('modeAdd').classList.remove('active');
@@ -549,6 +580,7 @@
     function getVal(id) { const val = parseInt(document.getElementById(id).value, 10); return isNaN(val) ? 0 : val; }
 
     function calculate() {
+        updateSleepTotal();
         if (!dates.base) { document.getElementById('resultDateTime').textContent = "--";
         return; }
         let calcDate = new Date(Date.UTC(dates.base.year, dates.base.month - 1, dates.base.day, dates.base.hour, dates.base.minute, dates.base.second));
@@ -559,6 +591,7 @@
         calcDate.setUTCHours(calcDate.getUTCHours() + (getVal('valh') * multi));
         calcDate.setUTCMinutes(calcDate.getUTCMinutes() + (getVal('valm') * multi));
         calcDate.setUTCSeconds(calcDate.getUTCSeconds() + (getVal('vals') * multi));
+        calcDate.setUTCMinutes(calcDate.getUTCMinutes() + (getVal('valSleep') * SLEEP_CYCLE_MINUTES * multi));
         const outYear = calcDate.getUTCFullYear();
         const outMonth = String(calcDate.getUTCMonth() + 1).padStart(2, '0');
         const outDay = String(calcDate.getUTCDate()).padStart(2, '0');
