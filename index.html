@@ -55,8 +55,18 @@
 
         .card { background-color: var(--card-bg); border-radius: 20px; padding: 20px 16px; box-shadow: 0 8px 24px var(--shadow-color); }
         
-        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-        .section-title { font-size: 14px; color: var(--text-secondary); font-weight: 600; }
+        /* 标题行：允许换行，宁可按钮掉到第二行也不能把卡片撞出横向滚动 */
+        .section-header { display: flex; justify-content: space-between; align-items: center;
+                          flex-wrap: wrap; gap: 8px 12px; margin-bottom: 16px; }
+        /* 标题要能管住它自己的内容：原本 14px/600/灰，跟卡片内的 .input-label（13px/600/灰）
+           几乎一模一样，层级是倒挂的。字号随视口伸缩，不按某一个宽度写死 */
+        .section-title { font-size: clamp(15px, 4.2vw, 17px); font-weight: 800; color: var(--text-main);
+                         letter-spacing: -0.02em; display: flex; align-items: center; gap: 10px;
+                         min-width: 0; }
+        /* 左页边的起点标记：五个模块竖着堆、没有导航，滑到哪靠它认位置。
+           渐变用的是结果卡片同一条（accent → #5E5CE6），不引新颜色 */
+        .section-title::before { content: ""; width: 4px; height: 1.05em; border-radius: 2px; flex: none;
+                                 background: linear-gradient(180deg, var(--accent-color), #5E5CE6); }
         
         .btn-section-reset { background-color: rgba(142, 142, 147, 0.15); color: var(--accent-color); border: none; padding: 6px 12px; border-radius: 12px; font-size: 12px; font-weight: 700; cursor: pointer; transition: background-color 0.2s; display: flex; align-items: center; gap: 4px; }
         .btn-section-reset:active { background-color: rgba(142, 142, 147, 0.25); }
