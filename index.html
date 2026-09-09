@@ -263,6 +263,18 @@
         .lunar-meta { font-size: 13px; opacity: 0.92; margin-top: 10px; font-weight: 500; line-height: 1.65; }
         .lunar-note { font-size: 12px; color: var(--text-secondary); text-align: center; margin-top: 12px; line-height: 1.5; }
 
+        /* 过年快捷跳转：两个按钮平分整行，高度按 44px 触摸标准单独定，不复用 .btn-section-reset（那个只有 29px，且被另外三张卡片共用） */
+        .lunar-quick { display: flex; gap: 10px; margin-top: 14px; }
+        .btn-lunar-quick {
+            flex: 1; min-height: 44px; display: flex; align-items: center; justify-content: center; gap: 6px;
+            background-color: rgba(142, 142, 147, 0.15); color: var(--accent-color); border: none;
+            border-radius: 14px; font-size: 14px; font-weight: 700; cursor: pointer;
+            transition: background-color 0.2s, opacity 0.2s;
+        }
+        .btn-lunar-quick:active { background-color: rgba(142, 142, 147, 0.28); }
+        .btn-lunar-quick:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-lunar-quick svg { width: 15px; height: 15px; flex: none; display: block; }
+
         /* 极窄屏（320~360）：只把尺寸压紧，不改成堆叠形态，让农历那一行仍然排得下 */
         @media (max-width: 22.5rem) {
             .lunar-line { gap: 3px 4px; padding: 8px 4px; }
@@ -488,6 +500,17 @@
                 <div class="select-btn" onclick="toggleLunarMenu(event, 'lunarDayMenu')"><span id="lunarDayDisplay">--</span></div>
                 <div class="select-menu" id="lunarDayMenu"></div>
             </div>
+        </div>
+
+        <div class="lunar-quick">
+            <button type="button" class="btn-lunar-quick" id="btnLunarEve" onclick="jumpToSpringFestival('eve')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                除夕
+            </button>
+            <button type="button" class="btn-lunar-quick" id="btnLunarNewYear" onclick="jumpToSpringFestival('day')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                春节
+            </button>
         </div>
 
         <div class="result-card" style="margin-top: 16px;">
@@ -1081,6 +1104,42 @@
         setLunarCardDate(bj.year, bj.month, bj.day);
     }
 
+    // ---- 过年快捷跳转 ----
+    // 春节 = 农历正月初一；除夕一律用「初一减一天」推，不去查腊月三十
+    //（腊月可能只有廿九，2027 年的除夕就是腊月廿九，查三十会落空）
+    function springFestivalSolar(lunarYear) {
+        return lunarToSolar(lunarYear, 1, false, 1);
+    }
+    // 找 ≥ 基准日的最近一个春节/除夕；算出来越出数据表区间就返回 null
+    // 春节落在公历 1 月 21 日 ~ 2 月 21 日之间，除夕最早也只到 1 月 20 日，
+    // 所以农历年号和它们所在的公历年号总是同一个，从 fromY 起找即可
+    function nextSpringFestival(kind, fromY, fromM, fromD) {
+        const fromMs = Date.UTC(fromY, fromM - 1, fromD);
+        for (let ly = fromY; ly <= LUNAR_MAX_YEAR; ly++) {
+            const s = springFestivalSolar(ly);
+            if (!s) continue;
+            let ms = Date.UTC(s.year, s.month - 1, s.day);
+            if (kind === 'eve') ms -= MS_PER_DAY;
+            if (ms < fromMs) continue;
+            if (ms < LUNAR_RANGE.minMs || ms > LUNAR_RANGE.maxMs) return null;
+            const d = new Date(ms);
+            return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1, day: d.getUTCDate() };
+        }
+        return null;
+    }
+    function jumpToSpringFestival(kind) {
+        const bj = getBeijingTimeObj();
+        const t = nextSpringFestival(kind, bj.year, bj.month, bj.day);
+        if (!t) return;                       // 越界时按钮本来就是禁用态，这里再兜一层
+        setLunarCardDate(t.year, t.month, t.day);
+    }
+    // 可用性只取决于「今天」，但仍挂在每次渲染上：页面跨年放着不关也不会算错
+    function refreshLunarQuickButtons() {
+        const bj = getBeijingTimeObj();
+        document.getElementById('btnLunarEve').disabled = !nextSpringFestival('eve', bj.year, bj.month, bj.day);
+        document.getElementById('btnLunarNewYear').disabled = !nextSpringFestival('day', bj.year, bj.month, bj.day);
+    }
+
     function pickSolarYear(key) { setLunarCardDate(parseInt(key, 10), lunarCardDate.month, lunarCardDate.day); }
     function pickSolarMonth(key) { setLunarCardDate(lunarCardDate.year, parseInt(key, 10), lunarCardDate.day); }
     function pickSolarDay(key) { setLunarCardDate(lunarCardDate.year, lunarCardDate.month, parseInt(key, 10)); }
@@ -1187,6 +1246,8 @@
             s.year + '年' + pad2(s.month) + '月' + pad2(s.day) + '日 星期' + solarWeekdayCn(s.year, s.month, s.day);
         document.getElementById('lunarRangeNote').textContent =
             '数据源：香港天文台《公曆與農曆日期對照表》 · 支持 ' + LUNAR_RANGE.minText + ' 至 ' + LUNAR_RANGE.maxText;
+
+        refreshLunarQuickButtons();
     }
 
     // ================= 模块五：下拉刷新 =================
