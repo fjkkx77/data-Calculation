@@ -203,9 +203,81 @@
         .picker-btn { flex: 1; padding: 12px; border-radius: 12px; font-size: 16px; font-weight: 600; border: none; cursor: pointer; }
         .btn-cancel-modal { background-color: var(--input-bg); color: var(--text-main); }
         .btn-done-modal { background-color: var(--accent-color); color: white; box-shadow: 0 4px 12px rgba(0,122,255,0.3); }
+
+        /* ================= 下拉刷新 ================= */
+        /* 先关掉浏览器自带的下拉刷新，否则会和自研的这套同时触发 */
+        html, body { overscroll-behavior-y: contain; }
+
+        #ptrIndicator {
+            position: fixed;
+            top: calc(-44px + env(safe-area-inset-top, 0px));
+            left: 50%;
+            margin-left: -18px;
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            background-color: var(--card-bg);
+            box-shadow: 0 4px 14px var(--shadow-color);
+            display: flex; align-items: center; justify-content: center;
+            color: var(--accent-color);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 1200;
+        }
+        /* 跟手过程中必须关掉过渡，只在松手回弹时开，否则拖泥带水 */
+        #ptrIndicator.ptr-animate { transition: transform 0.25s ease, opacity 0.25s ease; }
+        #ptrIndicator svg { width: 20px; height: 20px; }
+        #ptrIndicator .ptr-arrow { transition: transform 0.2s ease; }
+        #ptrIndicator.ptr-ready .ptr-arrow { transform: rotate(180deg); }
+        #ptrIndicator .ptr-spinner { display: none; }
+        #ptrIndicator.ptr-loading .ptr-arrow { display: none; }
+        #ptrIndicator.ptr-loading .ptr-spinner { display: block; animation: ptr-spin 0.8s linear infinite; }
+        @keyframes ptr-spin { to { transform: rotate(360deg); } }
+
+        /* ================= 公历 ⇄ 农历 ================= */
+        .lunar-line {
+            display: flex; align-items: center; justify-content: center;
+            flex-wrap: wrap; gap: 4px 6px;
+            background-color: var(--input-bg);
+            border-radius: 14px;
+            padding: 8px 6px;
+        }
+        .lunar-line .select-btn {
+            min-height: 44px;                 /* 触摸目标不小于 44px */
+            padding: 8px 10px;
+            border-radius: 10px;
+            background-color: var(--card-bg);
+            font-size: clamp(15px, 4.2vw, 17px);
+        }
+        .lunar-line .select-item { padding: 11px 16px; }
+        .lunar-line .select-menu { min-width: 120px; }
+        /* 菜单按各自在行内的位置定锚，防止最右侧那个把页面撑出横向滚动 */
+        .lunar-anchor-l .select-menu { left: 0; right: auto; }
+        .lunar-anchor-c .select-menu { left: 50%; right: auto; margin-left: -60px; }
+        .lunar-anchor-r .select-menu { left: auto; right: 0; }
+        .lunar-unit { font-size: 14px; font-weight: 600; color: var(--text-secondary); }
+
+        .lunar-arrow { display: flex; align-items: center; gap: 10px; margin: 14px 0; color: var(--text-secondary); }
+        .lunar-arrow::before, .lunar-arrow::after { content: ""; flex: 1; height: 1px; background-color: currentColor; opacity: 0.25; }
+        .lunar-arrow svg { width: 18px; height: 18px; display: block; }
+
+        .lunar-meta { font-size: 13px; opacity: 0.92; margin-top: 10px; font-weight: 500; line-height: 1.65; }
+        .lunar-note { font-size: 12px; color: var(--text-secondary); text-align: center; margin-top: 12px; line-height: 1.5; }
+
+        /* 极窄屏（320~360）：只把尺寸压紧，不改成堆叠形态，让农历那一行仍然排得下 */
+        @media (max-width: 22.5rem) {
+            .lunar-line { gap: 3px 4px; padding: 8px 4px; }
+            .lunar-line .select-btn { padding: 8px 7px; }
+            .lunar-line .select-btn::after { font-size: 12px; }
+            .lunar-unit { font-size: 13px; }
+        }
     </style>
 </head>
 <body>
+
+<div id="ptrIndicator">
+    <svg class="ptr-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
+    <svg class="ptr-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>
+</div>
 
 <div class="container">
     <div class="real-time-badge">当前北京时间：<span id="realTimeClock">--</span></div>
@@ -367,6 +439,63 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <div class="card" id="lunarCard">
+        <div class="section-header">
+            <div class="section-title">公历 ⇄ 农历</div>
+            <button class="btn-section-reset" onclick="setLunarToToday()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                今天
+            </button>
+        </div>
+
+        <label class="input-label">公历</label>
+        <div class="lunar-line">
+            <div class="custom-select lunar-anchor-l">
+                <div class="select-btn" onclick="toggleLunarMenu(event, 'solarYearMenu')"><span id="solarYearDisplay">--</span></div>
+                <div class="select-menu" id="solarYearMenu"></div>
+            </div>
+            <span class="lunar-unit">年</span>
+            <div class="custom-select lunar-anchor-c">
+                <div class="select-btn" onclick="toggleLunarMenu(event, 'solarMonthMenu')"><span id="solarMonthDisplay">--</span></div>
+                <div class="select-menu" id="solarMonthMenu"></div>
+            </div>
+            <span class="lunar-unit">月</span>
+            <div class="custom-select lunar-anchor-r">
+                <div class="select-btn" onclick="toggleLunarMenu(event, 'solarDayMenu')"><span id="solarDayDisplay">--</span></div>
+                <div class="select-menu" id="solarDayMenu"></div>
+            </div>
+            <span class="lunar-unit">日</span>
+        </div>
+
+        <div class="lunar-arrow">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 5h18"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 19H3"></path></svg>
+        </div>
+
+        <label class="input-label">农历</label>
+        <div class="lunar-line">
+            <div class="custom-select lunar-anchor-l">
+                <div class="select-btn" onclick="toggleLunarMenu(event, 'lunarYearMenu')"><span id="lunarYearDisplay">--</span></div>
+                <div class="select-menu" id="lunarYearMenu"></div>
+            </div>
+            <span class="lunar-unit">年</span>
+            <div class="custom-select lunar-anchor-c">
+                <div class="select-btn" onclick="toggleLunarMenu(event, 'lunarMonthMenu')"><span id="lunarMonthDisplay">--</span></div>
+                <div class="select-menu" id="lunarMonthMenu"></div>
+            </div>
+            <div class="custom-select lunar-anchor-r">
+                <div class="select-btn" onclick="toggleLunarMenu(event, 'lunarDayMenu')"><span id="lunarDayDisplay">--</span></div>
+                <div class="select-menu" id="lunarDayMenu"></div>
+            </div>
+        </div>
+
+        <div class="result-card" style="margin-top: 16px;">
+            <div class="result-label">农历</div>
+            <div class="result-value" id="lunarResultValue">--</div>
+            <div class="lunar-meta" id="lunarResultMeta"></div>
+        </div>
+        <div class="lunar-note" id="lunarRangeNote"></div>
     </div>
 
     <div class="card">
@@ -760,6 +889,377 @@
         units.forEach(unit => { document.getElementById('conv' + unit).value = 0; });
     }
 
+    // ================= 模块四：公历 ⇄ 农历 =================
+    /* ================= 农历数据表（农历 1901 - 2100 年）=================
+       每年一个整数，索引 0 对应农历 1901 年：
+         bit 0-3   闰月月号（0 = 该年无闰月）
+         bit 4-16  该年 12 或 13 个月的大小月，第 i 位为 1 表示第 i 个月是大月(30 天)
+         bit 17-22 正月初一距该公历年 1 月 1 日的天数偏移
+       数据源：香港天文台《公曆與農曆日期對照表》1901-2100 逐日文本
+       https://www.hko.gov.hk/tc/gts/time/conversion.htm
+       （农历 2100 年腊月只有初一落在 2100 年内，其月长取自 ICU chinese 历法）
+       生成后已与该对照表全区间逐日比对，无差异。 */
+    const LUNAR_TABLE = [
+        0x627520,0x4cea50,0x3964a5,0x5c64b0,0x44a9b0,0x315564,0x5656a0,0x40b590,0x2b7522,0x507520,
+        0x3bb256,0x60b250,0x48a4b0,0x334ab5,0x582ad0,0x4256b0,0x2cb692,0x52da90,0x3fd927,0x64e920,
+        0x4cd250,0x37a4d5,0x5ca560,0x462b60,0x2f5b54,0x566d40,0x40ea90,0x2de922,0x50e920,0x3ad266,
+        0x5e52b0,0x48a570,0x332b65,0x58b5a0,0x446d40,0x2eec93,0x527490,0x3d6937,0x62a930,0x4c52b0,
+        0x34a5b6,0x5aaad0,0x4656a0,0x31b554,0x56ba40,0x40b490,0x2ba932,0x50a950,0x3952d7,0x5e5360,
+        0x48aad0,0x355aa5,0x585b20,0x42da50,0x2fd4a3,0x54d4a0,0x3ca958,0x60a970,0x4c5560,0x36ab56,
+        0x5aad50,0x466d20,0x30ea54,0x56ea50,0x4064a0,0x28c973,0x4ea9b0,0x3b55a7,0x5e56a0,0x48b690,
+        0x357525,0x5ab520,0x42b250,0x2d64b4,0x52a4b0,0x3d4ab8,0x602ad0,0x4a56d0,0x36b696,0x5cda90,
+        0x46d920,0x31d254,0x56d250,0x41a4da,0x64a560,0x4e2b60,0x385b56,0x5e6d50,0x48ea90,0x35e925,
+        0x5ae920,0x44d260,0x2ca563,0x50a570,0x3d4d68,0x6235a0,0x4a6d50,0x376c95,0x5c7490,0x466930,
+        0x2f52b4,0x5452b0,0x3ea5b0,0x2b55a2,0x4e56a0,0x39b557,0x60ba40,0x4ab490,0x33a935,0x58a950,
+        0x4252d0,0x2caad4,0x50ab50,0x3d5aa9,0x625d20,0x4cda50,0x37d4a6,0x5cd4a0,0x46c950,0x3152e4,
+        0x545560,0x3eab50,0x2b5b22,0x506d20,0x38ea56,0x5e7250,0x4864b0,0x32c975,0x56cab0,0x4255a0,
+        0x2cad63,0x52b690,0x3d752b,0x62b520,0x4cb250,0x37a4b6,0x5aa4b0,0x444ab0,0x2e55b5,0x545ad0,
+        0x3eb6a0,0x2bb522,0x50d920,0x3bd257,0x5ed250,0x48a550,0x334ad5,0x584b60,0x405b50,0x2cdaa3,
+        0x52ec90,0x3fe928,0x62e920,0x4cd260,0x36a566,0x5aa570,0x445560,0x2e6d54,0x547550,0x407490,
+        0x28e933,0x4e6930,0x3952b7,0x5e52b0,0x46a5b0,0x3355a5,0x5856a0,0x42b650,0x2d74a4,0x52b4a0,
+        0x3da958,0x62a950,0x4a52d0,0x34aad6,0x5aab50,0x465aa0,0x2eba54,0x54da50,0x40d4a0,0x2bc953,
+        0x4ec960,0x3994e7,0x5e5560,0x48ab50,0x335b25,0x586d20,0x42ea50,0x2ee4a4,0x5068b0,0x3ac978,
+        0x604ab0,0x4a55b0,0x34ad66,0x5ab6a0,0x467520,0x317254,0x54b450,0x3ea8b0,0x2949b2,0x4e4ab0
+    ];
+    const LUNAR_MIN_YEAR = 1901;
+    const LUNAR_MAX_YEAR = LUNAR_MIN_YEAR + LUNAR_TABLE.length - 1;
+    const MS_PER_DAY = 86400000;
+
+    const HEAVENLY_STEMS = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+    const EARTHLY_BRANCHES = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+    const ZODIACS = ['鼠','牛','虎','兔','龙','蛇','马','羊','猴','鸡','狗','猪'];
+    const LUNAR_MONTH_NAMES = ['正','二','三','四','五','六','七','八','九','十','冬','腊'];
+    const LUNAR_DAY_TENS = ['初','十','廿','三'];
+    const LUNAR_DIGITS = ['〇','一','二','三','四','五','六','七','八','九'];
+    const WEEKDAY_CN = ['日','一','二','三','四','五','六'];
+
+    // 取某农历年的结构：闰月号、逐月天数、正月初一对应的 UTC 毫秒
+    function getLunarYearInfo(lunarYear) {
+        const raw = LUNAR_TABLE[lunarYear - LUNAR_MIN_YEAR];
+        if (raw === undefined) return null;
+        const leapMonth = raw & 0xF;
+        const sizeBits = (raw >> 4) & 0x1FFF;
+        const newYearOffset = (raw >> 17) & 0x3F;
+        const monthCount = leapMonth ? 13 : 12;
+        const monthDays = [];
+        for (let i = 0; i < monthCount; i++) monthDays.push(((sizeBits >> i) & 1) ? 30 : 29);
+        return {
+            year: lunarYear,
+            leapMonth: leapMonth,
+            monthDays: monthDays,
+            newYearMs: Date.UTC(lunarYear, 0, 1) + newYearOffset * MS_PER_DAY
+        };
+    }
+
+    // 农历「几月」在该年月序里的下标；该年没有这个闰月时返回 -1
+    function lunarMonthIndex(info, month, isLeap) {
+        if (!info || month < 1 || month > 12) return -1;
+        if (isLeap) return info.leapMonth === month ? month : -1;
+        if (!info.leapMonth || month <= info.leapMonth) return month - 1;
+        return month;
+    }
+
+    // 公历 → 农历。超出数据表范围返回 null
+    function solarToLunar(year, month, day) {
+        const ms = Date.UTC(year, month - 1, day);
+        let info = getLunarYearInfo(year);
+        if (!info || ms < info.newYearMs) info = getLunarYearInfo(year - 1);
+        if (!info || ms < info.newYearMs) return null;
+        let offset = Math.round((ms - info.newYearMs) / MS_PER_DAY);
+        let idx = 0;
+        while (idx < info.monthDays.length && offset >= info.monthDays[idx]) {
+            offset -= info.monthDays[idx];
+            idx++;
+        }
+        if (idx >= info.monthDays.length) return null;
+        let lunarMonth, isLeap;
+        if (!info.leapMonth || idx < info.leapMonth) { lunarMonth = idx + 1; isLeap = false; }
+        else if (idx === info.leapMonth) { lunarMonth = info.leapMonth; isLeap = true; }
+        else { lunarMonth = idx; isLeap = false; }
+        return { year: info.year, month: lunarMonth, isLeap: isLeap, day: offset + 1 };
+    }
+
+    // 农历 → 公历。闰月不存在或日期越界返回 null
+    function lunarToSolar(lunarYear, lunarMonth, isLeap, lunarDay) {
+        const info = getLunarYearInfo(lunarYear);
+        const idx = lunarMonthIndex(info, lunarMonth, isLeap);
+        if (idx < 0) return null;
+        if (!(lunarDay >= 1 && lunarDay <= info.monthDays[idx])) return null;
+        let offset = 0;
+        for (let i = 0; i < idx; i++) offset += info.monthDays[i];
+        const d = new Date(info.newYearMs + (offset + lunarDay - 1) * MS_PER_DAY);
+        return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1, day: d.getUTCDate() };
+    }
+
+    // 干支年 / 生肖：以公元 1984 年（农历甲子年）为基准，均在正月初一换年
+    function ganzhiOfLunarYear(lunarYear) {
+        const n = (((lunarYear - 1984) % 60) + 60) % 60;
+        return HEAVENLY_STEMS[n % 10] + EARTHLY_BRANCHES[n % 12];
+    }
+    function zodiacOfLunarYear(lunarYear) {
+        return ZODIACS[(((lunarYear - 1984) % 12) + 12) % 12];
+    }
+
+    function lunarYearToChinese(y) {
+        return String(y).split('').map(function (c) { return LUNAR_DIGITS[+c]; }).join('');
+    }
+    function lunarMonthToChinese(month, isLeap) {
+        return (isLeap ? '闰' : '') + LUNAR_MONTH_NAMES[month - 1] + '月';
+    }
+    function lunarDayToChinese(day) {
+        if (day === 10) return '初十';
+        if (day === 20) return '二十';
+        if (day === 30) return '三十';
+        return LUNAR_DAY_TENS[Math.floor(day / 10)] + LUNAR_DIGITS[day % 10];
+    }
+    function solarWeekdayCn(y, m, d) {
+        return WEEKDAY_CN[new Date(Date.UTC(y, m - 1, d)).getUTCDay()];
+    }
+    function daysInSolarMonth(y, m) {
+        return new Date(Date.UTC(y, m, 0)).getUTCDate();
+    }
+
+    function pad2(n) { return String(n).padStart(2, '0'); }
+
+    // 数据表支持的公历区间（由表本身推出，不写死）
+    const LUNAR_RANGE = (function () {
+        const firstInfo = getLunarYearInfo(LUNAR_MIN_YEAR);
+        const lastInfo = getLunarYearInfo(LUNAR_MAX_YEAR);
+        let total = 0;
+        for (let i = 0; i < lastInfo.monthDays.length; i++) total += lastInfo.monthDays[i];
+        const minMs = firstInfo.newYearMs;
+        const maxMs = lastInfo.newYearMs + (total - 1) * MS_PER_DAY;
+        const a = new Date(minMs), b = new Date(maxMs);
+        return {
+            minMs: minMs, maxMs: maxMs,
+            minYear: a.getUTCFullYear(), maxYear: b.getUTCFullYear(),
+            minText: a.getUTCFullYear() + '-' + pad2(a.getUTCMonth() + 1) + '-' + pad2(a.getUTCDate()),
+            maxText: b.getUTCFullYear() + '-' + pad2(b.getUTCMonth() + 1) + '-' + pad2(b.getUTCDate())
+        };
+    })();
+
+    function inLunarRange(y, m, d) {
+        const ms = Date.UTC(y, m - 1, d);
+        return ms >= LUNAR_RANGE.minMs && ms <= LUNAR_RANGE.maxMs;
+    }
+    // 只列出落在支持区间内的月/日，让界面上根本选不出非法组合
+    function solarMonthChoices(y) {
+        const list = [];
+        for (let m = 1; m <= 12; m++) {
+            if (inLunarRange(y, m, 1) || inLunarRange(y, m, daysInSolarMonth(y, m))) list.push(m);
+        }
+        return list;
+    }
+    function solarDayChoices(y, m) {
+        const list = [];
+        const n = daysInSolarMonth(y, m);
+        for (let d = 1; d <= n; d++) if (inLunarRange(y, m, d)) list.push(d);
+        return list;
+    }
+    function nearestIn(list, v) {
+        let best = list[0];
+        for (let i = 1; i < list.length; i++) {
+            if (Math.abs(list[i] - v) < Math.abs(best - v)) best = list[i];
+        }
+        return best;
+    }
+
+    // 只存公历这一份状态，农历侧完全由它推出，避免两边各存一份而对不上
+    let lunarCardDate = null;
+
+    function setLunarCardDate(y, m, d) {
+        const months = solarMonthChoices(y);
+        if (months.indexOf(m) < 0) m = nearestIn(months, m);
+        const days = solarDayChoices(y, m);
+        if (days.indexOf(d) < 0) d = nearestIn(days, d);
+        lunarCardDate = { year: y, month: m, day: d };
+        renderLunarCard();
+    }
+
+    function setLunarToToday() {
+        const bj = getBeijingTimeObj();
+        setLunarCardDate(bj.year, bj.month, bj.day);
+    }
+
+    function pickSolarYear(key) { setLunarCardDate(parseInt(key, 10), lunarCardDate.month, lunarCardDate.day); }
+    function pickSolarMonth(key) { setLunarCardDate(lunarCardDate.year, parseInt(key, 10), lunarCardDate.day); }
+    function pickSolarDay(key) { setLunarCardDate(lunarCardDate.year, lunarCardDate.month, parseInt(key, 10)); }
+
+    function currentLunar() {
+        return solarToLunar(lunarCardDate.year, lunarCardDate.month, lunarCardDate.day);
+    }
+    // 换年/换月之后原来的闰月或日子可能不存在了，就地收敛到最接近的合法值
+    function applyLunar(lunarYear, month, isLeap, day) {
+        const info = getLunarYearInfo(lunarYear);
+        if (!info) return;
+        let idx = lunarMonthIndex(info, month, isLeap);
+        if (idx < 0) { isLeap = false; idx = lunarMonthIndex(info, month, false); }
+        if (idx < 0) { month = 1; isLeap = false; idx = 0; }
+        if (day > info.monthDays[idx]) day = info.monthDays[idx];
+        if (day < 1) day = 1;
+        const s = lunarToSolar(lunarYear, month, isLeap, day);
+        if (s) setLunarCardDate(s.year, s.month, s.day);
+    }
+    function pickLunarYear(key) { const c = currentLunar(); applyLunar(parseInt(key, 10), c.month, c.isLeap, c.day); }
+    function pickLunarMonth(key) {
+        const c = currentLunar();
+        const isLeap = key.charAt(0) === 'L';
+        applyLunar(c.year, parseInt(isLeap ? key.slice(1) : key, 10), isLeap, c.day);
+    }
+    function pickLunarDay(key) { const c = currentLunar(); applyLunar(c.year, c.month, c.isLeap, parseInt(key, 10)); }
+
+    function buildLunarMenu(menuId, items, currentKey, handlerName) {
+        let html = '';
+        for (let i = 0; i < items.length; i++) {
+            const sel = items[i].key === currentKey ? ' selected' : '';
+            html += '<div class="select-item' + sel + '" data-key="' + items[i].key + '" onclick="' +
+                    handlerName + '(this.dataset.key)">' + items[i].label + '</div>';
+        }
+        document.getElementById(menuId).innerHTML = html;
+    }
+
+    function closeLunarMenus() {
+        const menus = document.querySelectorAll('#lunarCard .select-menu.show');
+        for (let i = 0; i < menus.length; i++) menus[i].classList.remove('show');
+    }
+    function toggleLunarMenu(event, menuId) {
+        event.stopPropagation();
+        const menu = document.getElementById(menuId);
+        const showing = menu.classList.contains('show');
+        closeLunarMenus();
+        if (showing) return;
+        menu.classList.add('show');
+        const sel = menu.querySelector('.select-item.selected');
+        // 只滚菜单自身：scrollIntoView 会把整页也一起带着跳
+        if (sel) menu.scrollTop = sel.offsetTop - menu.clientHeight / 2 + sel.offsetHeight / 2;
+    }
+
+    function renderLunarCard() {
+        const s = lunarCardDate;
+
+        const yearItems = [];
+        for (let y = LUNAR_RANGE.minYear; y <= LUNAR_RANGE.maxYear; y++) {
+            yearItems.push({ key: String(y), label: String(y) });
+        }
+        buildLunarMenu('solarYearMenu', yearItems, String(s.year), 'pickSolarYear');
+
+        const monthItems = solarMonthChoices(s.year).map(function (m) { return { key: String(m), label: String(m) }; });
+        buildLunarMenu('solarMonthMenu', monthItems, String(s.month), 'pickSolarMonth');
+
+        const dayItems = solarDayChoices(s.year, s.month).map(function (d) { return { key: String(d), label: String(d) }; });
+        buildLunarMenu('solarDayMenu', dayItems, String(s.day), 'pickSolarDay');
+
+        document.getElementById('solarYearDisplay').textContent = s.year;
+        document.getElementById('solarMonthDisplay').textContent = s.month;
+        document.getElementById('solarDayDisplay').textContent = s.day;
+
+        const l = solarToLunar(s.year, s.month, s.day);
+        const info = getLunarYearInfo(l.year);
+
+        const lYearItems = [];
+        for (let y = LUNAR_MIN_YEAR; y <= LUNAR_MAX_YEAR; y++) {
+            lYearItems.push({ key: String(y), label: lunarYearToChinese(y) });
+        }
+        buildLunarMenu('lunarYearMenu', lYearItems, String(l.year), 'pickLunarYear');
+
+        const lMonthItems = [];
+        for (let m = 1; m <= 12; m++) {
+            lMonthItems.push({ key: String(m), label: lunarMonthToChinese(m, false) });
+            if (info.leapMonth === m) lMonthItems.push({ key: 'L' + m, label: lunarMonthToChinese(m, true) });
+        }
+        buildLunarMenu('lunarMonthMenu', lMonthItems, (l.isLeap ? 'L' : '') + l.month, 'pickLunarMonth');
+
+        const idx = lunarMonthIndex(info, l.month, l.isLeap);
+        const lDayItems = [];
+        for (let d = 1; d <= info.monthDays[idx]; d++) {
+            lDayItems.push({ key: String(d), label: lunarDayToChinese(d) });
+        }
+        buildLunarMenu('lunarDayMenu', lDayItems, String(l.day), 'pickLunarDay');
+
+        document.getElementById('lunarYearDisplay').textContent = lunarYearToChinese(l.year);
+        document.getElementById('lunarMonthDisplay').textContent = lunarMonthToChinese(l.month, l.isLeap);
+        document.getElementById('lunarDayDisplay').textContent = lunarDayToChinese(l.day);
+
+        document.getElementById('lunarResultValue').textContent =
+            lunarYearToChinese(l.year) + '年' + lunarMonthToChinese(l.month, l.isLeap) + lunarDayToChinese(l.day);
+        document.getElementById('lunarResultMeta').innerHTML =
+            ganzhiOfLunarYear(l.year) + '年 · 属' + zodiacOfLunarYear(l.year) + '<br>公历 ' +
+            s.year + '年' + pad2(s.month) + '月' + pad2(s.day) + '日 星期' + solarWeekdayCn(s.year, s.month, s.day);
+        document.getElementById('lunarRangeNote').textContent =
+            '数据源：香港天文台《公曆與農曆日期對照表》 · 支持 ' + LUNAR_RANGE.minText + ' 至 ' + LUNAR_RANGE.maxText;
+    }
+
+    // ================= 模块五：下拉刷新 =================
+    // 死区防误触 → 出死区后方向一锤定音 → 阈值按屏高推导（小屏上手指行程占比才不会偏重）
+    function setupPullToRefresh() {
+        const el = document.getElementById('ptrIndicator');
+        if (!el) return;
+        const DEADZONE = 16;      // 起手死区：按下瞬间的抖动不算下拉
+        const DAMPING = 0.42;     // 阻尼：手指位移 × 它 = 指示器位移
+        const MAX_PULL = 120;     // 再往下拉指示器也不动了
+        function threshold() { return Math.min(100, Math.max(56, window.innerHeight * 0.1)); }
+
+        let startX = 0, startY = 0, pulling = false, locked = false, distance = 0, refreshing = false;
+
+        // 有浮层时不接管手势：日期选择弹窗、任何展开着的下拉菜单
+        function blocked() {
+            const modal = document.getElementById('datePickerModal');
+            if (modal && modal.classList.contains('show')) return true;
+            if (document.querySelector('.select-menu.show')) return true;
+            return false;
+        }
+        function paint(d) {
+            distance = d;
+            el.classList.remove('ptr-animate');
+            el.style.transform = 'translateY(' + d + 'px)';
+            el.style.opacity = Math.min(1, d / (threshold() * 0.8));
+            if (d >= threshold()) el.classList.add('ptr-ready'); else el.classList.remove('ptr-ready');
+        }
+        function reset(animate) {
+            distance = 0;
+            if (animate) el.classList.add('ptr-animate'); else el.classList.remove('ptr-animate');
+            el.style.transform = 'translateY(0)';
+            el.style.opacity = '0';
+            el.classList.remove('ptr-ready');
+        }
+
+        document.addEventListener('touchstart', function (e) {
+            if (refreshing || blocked() || e.touches.length !== 1 || window.scrollY > 0) { pulling = false; return; }
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+            pulling = true;
+            locked = false;
+        }, { passive: true });
+
+        document.addEventListener('touchmove', function (e) {
+            if (!pulling || refreshing) return;
+            const dx = e.touches[0].clientX - startX;
+            const dy = e.touches[0].clientY - startY;
+            if (!locked) {
+                if (Math.abs(dy) < DEADZONE && Math.abs(dx) < DEADZONE) return;          // 还在死区，继续观察
+                if (dy <= 0 || Math.abs(dx) > Math.abs(dy)) { pulling = false; return; } // 上滑/横滑，整次弃权
+                locked = true;
+            }
+            // 下拉到一半改主意往上滑：交还控制权，否则页面会卡住不动
+            if (dy <= 0 || window.scrollY > 0) { pulling = false; locked = false; reset(true); return; }
+            paint(Math.min((dy - DEADZONE) * DAMPING, MAX_PULL));
+            e.preventDefault();
+        }, { passive: false });
+
+        document.addEventListener('touchend', function () {
+            if (!pulling || !locked || refreshing) { pulling = false; locked = false; return; }
+            pulling = false;
+            locked = false;
+            if (distance < threshold()) { reset(true); return; }
+            refreshing = true;
+            el.classList.add('ptr-animate', 'ptr-loading');
+            el.style.transform = 'translateY(' + threshold() + 'px)';
+            try { sessionStorage.setItem('ptr-fired', String(Date.now())); } catch (err) {}
+            // 留一下 spinner，否则直接白屏像卡死
+            setTimeout(function () { location.reload(); }, 260);
+        }, { passive: true });
+    }
+
     // ================= 全局 Modal 与日历逻辑 =================
     function populateDropdowns() {
         const yearMenu = document.getElementById('yearMenu');
@@ -911,7 +1411,10 @@
         populateDropdowns();
         setBaseToNow();
         setDiffStartToNow();
+        setLunarToToday();
         initKeyboardFix();
+        setupPullToRefresh();
+        document.addEventListener('click', closeLunarMenus);
     };
 </script>
 
