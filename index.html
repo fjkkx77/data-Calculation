@@ -23,6 +23,7 @@
             --dropdown-border: rgba(0, 0, 0, 0.05);
             --stepper-btn-active: rgba(0, 0, 0, 0.08);
             --scrollbar-thumb: rgba(0, 0, 0, 0.25);
+            --nav-bg: rgba(227, 227, 232, 0.95);
         }
 
         @media (prefers-color-scheme: dark) {
@@ -40,6 +41,7 @@
                 --dropdown-border: rgba(255, 255, 255, 0.1);
                 --stepper-btn-active: rgba(255, 255, 255, 0.15);
                 --scrollbar-thumb: rgba(255, 255, 255, 0.25);
+                --nav-bg: rgba(44, 44, 46, 0.95);
             }
         }
 
@@ -53,7 +55,26 @@
         .real-time-badge { background-color: var(--card-bg); color: var(--text-main); padding: 10px 16px; border-radius: 20px; text-align: center; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px var(--shadow-color); align-self: center; }
         .real-time-badge span { color: var(--accent-color); font-variant-numeric: tabular-nums; }
 
-        .card { background-color: var(--card-bg); border-radius: 20px; padding: 20px 16px; box-shadow: 0 8px 24px var(--shadow-color); }
+        .card { background-color: var(--card-bg); border-radius: 20px; padding: 20px 16px; box-shadow: 0 8px 24px var(--shadow-color);
+                /* 跳转落点要避开吸顶导航条，高度由 JS 实测后写进 --nav-offset，不写死 */
+                scroll-margin-top: var(--nav-offset, 72px); }
+
+        /* 模块导航：沿用页面已有的 .segmented-control 语言（灰底轨道 + 白色滑块）——
+           分段控件本来就是「N 选一」，正对应「我现在在哪个模块」，不另发明新控件。
+           在流里 + sticky：顶部就能用（刚打开正是最想跳转的时候），滑下去自动吸顶，零 JS */
+        .section-nav { position: sticky; top: 8px; z-index: 90;
+                       display: flex; gap: 4px; padding: 4px; border-radius: 14px;
+                       background-color: var(--nav-bg);
+                       -webkit-backdrop-filter: blur(25px); backdrop-filter: blur(25px);
+                       box-shadow: 0 6px 20px var(--shadow-color); }
+        /* z-index 90：低于 .select-menu(100) 和日期弹窗(999)，高于普通卡片——
+           下拉菜单弹在导航条附近时不会被切掉 */
+        .nav-item { flex: 1; min-height: 44px; display: flex; align-items: center; justify-content: center;
+                    border: none; background: transparent; color: var(--text-secondary);
+                    font-size: 15px; font-weight: 600; border-radius: 10px; cursor: pointer;
+                    transition: background-color 0.25s, color 0.25s; }
+        .nav-item[aria-current="true"] { background-color: var(--card-bg); color: var(--text-main);
+                                         box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08); }
         
         /* 标题行：允许换行，宁可按钮掉到第二行也不能把卡片撞出横向滚动 */
         .section-header { display: flex; justify-content: space-between; align-items: center;
@@ -304,7 +325,14 @@
 <div class="container">
     <div class="real-time-badge">当前北京时间：<span id="realTimeClock">--</span></div>
 
-    <div class="card">
+    <nav class="section-nav" id="sectionNav" aria-label="模块导航">
+        <button type="button" class="nav-item" data-target="cardBase"  onclick="jumpToSection('cardBase')">推算</button>
+        <button type="button" class="nav-item" data-target="cardDiff"  onclick="jumpToSection('cardDiff')">间隔</button>
+        <button type="button" class="nav-item" data-target="lunarCard" onclick="jumpToSection('lunarCard')">农历</button>
+        <button type="button" class="nav-item" data-target="cardUnit"  onclick="jumpToSection('cardUnit')">单位</button>
+    </nav>
+
+    <div class="card" id="cardBase">
         <div class="section-header" style="margin-bottom: 16px;">
             <div class="section-title">基准时间 (推算起点)</div>
         </div>
@@ -404,7 +432,7 @@
         </div>
     </div>
 
-    <div class="card">
+    <div class="card" id="cardDiff">
         <div class="section-header">
             <div class="section-title">日期时间间隔</div>
             <div style="display: flex; gap: 8px;">
@@ -531,7 +559,7 @@
         <div class="lunar-note" id="lunarRangeNote"></div>
     </div>
 
-    <div class="card">
+    <div class="card" id="cardUnit">
         <div class="section-header">
             <div class="section-title">时间单位全自动换算</div>
             <button class="btn-section-reset" onclick="resetConverter()">
@@ -1260,6 +1288,41 @@
         refreshLunarQuickButtons();
     }
 
+    // ================= 模块六：模块导航 =================
+    function jumpToSection(id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        el.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'start' });
+    }
+
+    function setupSectionNav() {
+        const nav = document.getElementById('sectionNav');
+        if (!nav) return;
+        const items = Array.prototype.slice.call(nav.querySelectorAll('.nav-item'));
+        const cards = items.map(function (b) { return document.getElementById(b.dataset.target); });
+
+        // 导航条实际多高就让卡片避多少，字号/安全区变了也不会错位
+        function syncOffset() {
+            const h = nav.getBoundingClientRect().height;
+            document.documentElement.style.setProperty('--nav-offset', (h + 16) + 'px');
+        }
+        syncOffset();
+        window.addEventListener('resize', syncOffset);
+
+        function mark(el) {
+            items.forEach(function (b, i) { b.setAttribute('aria-current', cards[i] === el ? 'true' : 'false'); });
+        }
+        mark(cards[0]);
+
+        // 高亮跟随滚动：只认「落在视口中间那一条窄带里」的卡片，
+        // 比监听 scroll 自己算位置稳，也不会在两张卡交界处来回跳
+        const io = new IntersectionObserver(function (entries) {
+            entries.forEach(function (e) { if (e.isIntersecting) mark(e.target); });
+        }, { rootMargin: '-45% 0px -45% 0px', threshold: 0 });
+        cards.forEach(function (c) { if (c) io.observe(c); });
+    }
+
     // ================= 模块五：下拉刷新 =================
     // 死区防误触 → 出死区后方向一锤定音 → 阈值按屏高推导（小屏上手指行程占比才不会偏重）
     function setupPullToRefresh() {
@@ -1483,6 +1546,7 @@
         setBaseToNow();
         setDiffStartToNow();
         setLunarToToday();
+        setupSectionNav();
         initKeyboardFix();
         setupPullToRefresh();
         document.addEventListener('click', closeLunarMenus);
