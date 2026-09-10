@@ -23,7 +23,11 @@
             --dropdown-border: rgba(0, 0, 0, 0.05);
             --stepper-btn-active: rgba(0, 0, 0, 0.08);
             --scrollbar-thumb: rgba(0, 0, 0, 0.25);
-            --nav-bg: rgba(227, 227, 232, 0.95);
+            /* 导航条未选中文字：不能用 --text-secondary（#8E8E93），
+               它在白底上只有 3.23:1，低于 WCAG AA 小字的 4.5:1。#636368 是 5.97:1 */
+            --nav-idle: #636368;
+            /* 药丸光晕要跟随主色，CSS 算不出 hex 的 rgba，所以另存一份通道值 */
+            --accent-rgb: 0, 122, 255;
         }
 
         @media (prefers-color-scheme: dark) {
@@ -41,7 +45,8 @@
                 --dropdown-border: rgba(255, 255, 255, 0.1);
                 --stepper-btn-active: rgba(255, 255, 255, 0.15);
                 --scrollbar-thumb: rgba(255, 255, 255, 0.25);
-                --nav-bg: rgba(44, 44, 46, 0.95);
+                --nav-idle: #B8B8BE;
+                --accent-rgb: 10, 132, 255;
             }
         }
 
@@ -59,22 +64,28 @@
                 /* 跳转落点要避开吸顶导航条，高度由 JS 实测后写进 --nav-offset，不写死 */
                 scroll-margin-top: var(--nav-offset, 72px); }
 
-        /* 模块导航：沿用页面已有的 .segmented-control 语言（灰底轨道 + 白色滑块）——
-           分段控件本来就是「N 选一」，正对应「我现在在哪个模块」，不另发明新控件。
-           在流里 + sticky：顶部就能用（刚打开正是最想跳转的时候），滑下去自动吸顶，零 JS */
+        /* 模块导航：分段控件形态（「N 选一」正对应「我现在在哪个模块」）。
+           在流里 + sticky：顶部就能用（刚打开正是最想跳转的时候），滑下去自动吸顶，零 JS。
+           初版照抄了 .segmented-control 的灰底轨道 + 白滑块，但实测未选中文字对灰轨道
+           只有 2.57:1（AA 小字要 4.5:1）、白滑块对灰轨道只有 1.27:1，整条发灰发糊，
+           所以改成白底 + 蓝色实心药丸 */
+        /* 底色用不透明的 --card-bg（跟其他卡片一致）。
+           不用半透明 + backdrop-filter：即使 0.95，后面的卡片也会映出一块浅色矩形，
+           看着像「第二个选中项」（实测踩过）。清晰优先于玻璃质感 */
         .section-nav { position: sticky; top: 8px; z-index: 90;
                        display: flex; gap: 4px; padding: 4px; border-radius: 14px;
-                       background-color: var(--nav-bg);
-                       -webkit-backdrop-filter: blur(25px); backdrop-filter: blur(25px);
-                       box-shadow: 0 6px 20px var(--shadow-color); }
+                       background-color: var(--card-bg);
+                       box-shadow: 0 8px 24px var(--shadow-color); }
         /* z-index 90：低于 .select-menu(100) 和日期弹窗(999)，高于普通卡片——
            下拉菜单弹在导航条附近时不会被切掉 */
         .nav-item { flex: 1; min-height: 44px; display: flex; align-items: center; justify-content: center;
-                    border: none; background: transparent; color: var(--text-secondary);
+                    border: none; background: transparent; color: var(--nav-idle);
                     font-size: 15px; font-weight: 600; border-radius: 10px; cursor: pointer;
                     transition: background-color 0.25s, color 0.25s; }
-        .nav-item[aria-current="true"] { background-color: var(--card-bg); color: var(--text-main);
-                                         box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08); }
+        .nav-item[aria-current="true"] { background-color: var(--accent-color); color: #FFFFFF;
+                                         box-shadow: 0 4px 12px rgba(var(--accent-rgb), 0.35); }
+        /* 未选中项的按压反馈；选中项已经是实心药丸，不需要再变 */
+        .nav-item:not([aria-current="true"]):active { background-color: var(--stepper-btn-active); }
         
         /* 标题行：允许换行，宁可按钮掉到第二行也不能把卡片撞出横向滚动 */
         .section-header { display: flex; justify-content: space-between; align-items: center;
