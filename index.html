@@ -232,6 +232,9 @@
         .time-picker-title { font-size: 13px; color: var(--text-secondary); font-weight: 600; }
         .btn-time-zero { background-color: rgba(142, 142, 147, 0.15); color: var(--text-secondary); border: none; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; transition: 0.2s; }
         .btn-time-zero:active { background-color: rgba(142, 142, 147, 0.25); color: var(--text-main); }
+        .time-picker-actions { display: flex; gap: 8px; }
+        .btn-time-now { background-color: rgba(0, 122, 255, 0.1); color: var(--accent-color); border: none; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .btn-time-now:active { background-color: rgba(0, 122, 255, 0.2); }
 
         .time-picker { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 10px; }
         .modal-time-stepper { display: flex; flex-direction: column; align-items: center; background: var(--input-bg); border-radius: 12px; width: 60px; overflow: hidden; }
@@ -655,7 +658,10 @@
         
         <div class="time-picker-header">
             <div class="time-picker-title">精确时间</div>
-            <button class="btn-time-zero" onclick="resetModalTime()">一键归零</button>
+            <div class="time-picker-actions">
+                <button class="btn-time-now" onclick="setModalTimeNow()">现在</button>
+                <button class="btn-time-zero" onclick="resetModalTime()">一键归零</button>
+            </div>
         </div>
 
         <div class="time-picker">
@@ -1471,6 +1477,14 @@
         document.getElementById('modalH').value = '00';
         document.getElementById('modalM').value = '00';
         document.getElementById('modalS').value = '00';
+    }
+
+    // 只填当前时分秒，不动已选日期（要连日期一起跳回今天用顶部「今天」）
+    function setModalTimeNow() {
+        const now = getBeijingTimeObj();
+        document.getElementById('modalH').value = String(now.hour).padStart(2, '0');
+        document.getElementById('modalM').value = String(now.minute).padStart(2, '0');
+        document.getElementById('modalS').value = String(now.second).padStart(2, '0');
     }
 
     function openModal(target) {
