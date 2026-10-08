@@ -2,7 +2,9 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- 禁止双指缩放（用户 2026-10-08 要求：太容易误触）。这行只管得住安卓等浏览器，
+         iOS Safari 从 iOS 10 起不理会它，所以下面 CSS 的 touch-action 和 JS 的 gesturestart 再各拦一层 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>日期推算与换算</title>
     <style>
         :root {
@@ -265,6 +267,8 @@
         /* ================= 下拉刷新 ================= */
         /* 先关掉浏览器自带的下拉刷新，否则会和自研的这套同时触发 */
         html, body { overscroll-behavior-y: contain; }
+        /* 只允许平移，不允许双指缩放和双击放大（touch-action 对子孙元素取交集，写在根上全页生效） */
+        html { touch-action: pan-x pan-y; }
 
         #ptrIndicator {
             position: fixed;
@@ -1660,6 +1664,11 @@
         else setLunarToToday();
         return true;
     }
+
+    // iOS Safari 专有的双指手势事件：拦掉就不缩放（其他浏览器没有这个事件，等于不生效）
+    ['gesturestart', 'gesturechange', 'gestureend'].forEach(type => {
+        document.addEventListener(type, e => e.preventDefault(), { passive: false });
+    });
 
     window.onload = () => {
         populateDropdowns();
