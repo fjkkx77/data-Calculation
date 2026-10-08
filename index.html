@@ -2,8 +2,8 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>日期推算与换算 (Pro Max 终极大满贯版)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日期推算与换算</title>
     <style>
         :root {
             --bg-color: #F2F2F7;
@@ -15,8 +15,7 @@
             --input-bg: #F2F2F7;
             --shadow-color: rgba(0, 0, 0, 0.06);
             --modal-overlay: rgba(0, 0, 0, 0.4);
-            --modal-bg-light: rgba(255, 255, 255, 0.85);
-            --modal-bg-dark: rgba(30, 30, 30, 0.85);
+            --modal-bg: rgba(255, 255, 255, 0.85);
             --danger-color: #FF3B30;
             --danger-bg: rgba(255, 59, 48, 0.1);
             --dropdown-bg: rgba(255, 255, 255, 0.95);
@@ -41,6 +40,7 @@
                 --input-bg: #2C2C2E;
                 --shadow-color: rgba(0, 0, 0, 0.3);
                 --modal-overlay: rgba(0, 0, 0, 0.6);
+                --modal-bg: rgba(30, 30, 30, 0.85);
                 --dropdown-bg: rgba(40, 40, 40, 0.95);
                 --dropdown-border: rgba(255, 255, 255, 0.1);
                 --stepper-btn-active: rgba(255, 255, 255, 0.15);
@@ -190,11 +190,13 @@
             word-wrap: break-word; /* 极其长的数字允许换行 */
         }
 
+        .diff-totals-note { grid-column: 1 / -1; font-size: 11px; opacity: 0.8; line-height: 1.5; margin-top: 2px; }
+
         /* ================= iOS 风格自定义日期选择器 ================= */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; background-color: var(--modal-overlay); display: flex; justify-content: center; align-items: center; z-index: 999; opacity: 0; pointer-events: none; transition: opacity 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
         .modal-overlay.show { opacity: 1; pointer-events: auto; }
 
-        .ios-picker { width: 90%; max-width: 360px; max-height: 94dvh; overflow-y: auto; overscroll-behavior: none; background: var(--modal-bg-light); backdrop-filter: blur(25px) saturate(180%); -webkit-backdrop-filter: blur(25px) saturate(180%); border-radius: 24px; padding: 16px 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); transform: scale(0.95); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); border: 1px solid var(--dropdown-border); scrollbar-width: none; }
+        .ios-picker { width: 90%; max-width: 360px; max-height: 94dvh; overflow-y: auto; overscroll-behavior: none; background: var(--modal-bg); backdrop-filter: blur(25px) saturate(180%); -webkit-backdrop-filter: blur(25px) saturate(180%); border-radius: 24px; padding: 16px 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); transform: scale(0.95); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); border: 1px solid var(--dropdown-border); scrollbar-width: none; }
         .ios-picker::-webkit-scrollbar { display: none; }
         .modal-overlay.show .ios-picker { transform: scale(1); }
 
@@ -206,7 +208,7 @@
         .select-btn:active { background: rgba(142, 142, 147, 0.25); }
         .select-btn::after { content: "▾"; font-size: 14px; color: var(--text-secondary); }
 
-        .select-menu { position: absolute; top: calc(100% + 8px); left: 0; background: var(--dropdown-bg); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); border: 1px solid var(--dropdown-border); border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); max-height: 200px; overflow-y: auto; overflow-x: hidden; min-width: 100px; z-index: 100; opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.95); transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1); scrollbar-width: thin; scrollbar-color: var(--scrollbar-thumb) transparent; }
+        .select-menu { position: absolute; top: calc(100% + 8px); left: 0; background: var(--dropdown-bg); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); border: 1px solid var(--dropdown-border); border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); max-height: 200px; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; min-width: 100px; z-index: 100; opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.95); transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1); scrollbar-width: thin; scrollbar-color: var(--scrollbar-thumb) transparent; }
         .select-menu.show { opacity: 1; pointer-events: auto; transform: translateY(0) scale(1); }
         .select-menu::-webkit-scrollbar { width: 5px; }
         .select-menu::-webkit-scrollbar-track { background: transparent; margin: 6px 0; }
@@ -222,11 +224,14 @@
 
         .weekdays, .days { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; gap: 4px; position: relative; z-index: 1; }
         .weekdays span { font-size: 12px; color: var(--text-secondary); font-weight: 500; margin-bottom: 6px; }
-        .days div { height: 36px; display: flex; justify-content: center; align-items: center; font-size: 17px; font-weight: 500; border-radius: 50%; cursor: pointer; transition: background-color 0.2s; }
-        .days div:active { background-color: var(--segment-bg); }
+        /* 外层格子 44px 高管点击（触摸标准），里面的正圆管显示：
+           窄屏上格子只有 33px 宽，直接给格子画圆会变成竖椭圆 */
+        .days div { height: 44px; display: flex; justify-content: center; align-items: center; cursor: pointer; }
         .days div.empty { cursor: default; }
-        .days div.selected { background-color: var(--accent-color); color: white; font-weight: 700; box-shadow: 0 4px 10px rgba(0,122,255,0.3); }
-        .days div.today:not(.selected) { color: var(--accent-color); font-weight: 700; }
+        .days div span { width: min(40px, 100%); aspect-ratio: 1; display: flex; justify-content: center; align-items: center; font-size: 17px; font-weight: 500; border-radius: 50%; transition: background-color 0.2s; }
+        .days div:active span { background-color: var(--segment-bg); }
+        .days div.selected span { background-color: var(--accent-color); color: white; font-weight: 700; box-shadow: 0 4px 10px rgba(0,122,255,0.3); }
+        .days div.today:not(.selected) span { color: var(--accent-color); font-weight: 700; }
 
         .time-picker-header { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(142, 142, 147, 0.2); }
         .time-picker-title { font-size: 13px; color: var(--text-secondary); font-weight: 600; }
@@ -235,6 +240,14 @@
         .time-picker-actions { display: flex; gap: 8px; }
         .btn-time-now { background-color: rgba(0, 122, 255, 0.1); color: var(--accent-color); border: none; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; transition: 0.2s; }
         .btn-time-now:active { background-color: rgba(0, 122, 255, 0.2); }
+
+        /* 小按钮外观不变，只把可点区域往上下各撑开，凑够 44px 触摸高度（Apple HIG 的最小点按尺寸）。
+           左右不撑：这几个按钮都是并排放的，横向撑开会盖住隔壁按钮 */
+        .btn-section-reset, .btn-time-now, .btn-time-zero { position: relative; }
+        .btn-section-reset::after, .btn-time-now::after, .btn-time-zero::after {
+            content: ""; position: absolute; left: 0; right: 0;
+            top: 50%; height: 44px; transform: translateY(-50%);
+        }
 
         .time-picker { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 10px; }
         .modal-time-stepper { display: flex; flex-direction: column; align-items: center; background: var(--input-bg); border-radius: 12px; width: 60px; overflow: hidden; }
@@ -478,11 +491,11 @@
 
             <div class="diff-totals-grid" id="diffTotalsGrid">
                 <div class="diff-total-item">
-                    <div class="diff-total-label">年</div>
+                    <div class="diff-total-label">≈ 年</div>
                     <div class="diff-total-val" id="totY">0</div>
                 </div>
                 <div class="diff-total-item">
-                    <div class="diff-total-label">月</div>
+                    <div class="diff-total-label">≈ 月</div>
                     <div class="diff-total-val" id="totM">0</div>
                 </div>
                 <div class="diff-total-item">
@@ -501,6 +514,7 @@
                     <div class="diff-total-label">秒</div>
                     <div class="diff-total-val" id="totS">0</div>
                 </div>
+                <div class="diff-totals-note">≈ 年按 365 天、≈ 月按 365÷12 天折算</div>
             </div>
         </div>
     </div>
@@ -718,11 +732,83 @@
         };
     }
 
-    setInterval(() => {
+    function tickClock() {
         const bj = getBeijingTimeObj();
-        document.getElementById('realTimeClock').textContent = 
+        document.getElementById('realTimeClock').textContent =
             `${bj.year}-${String(bj.month).padStart(2,'0')}-${String(bj.day).padStart(2,'0')} ${String(bj.hour).padStart(2,'0')}:${String(bj.minute).padStart(2,'0')}:${String(bj.second).padStart(2,'0')}`;
-    }, 1000);
+    }
+    tickClock();   // 先走一次，否则打开页面的第 1 秒显示的是「--」
+    setInterval(tickClock, 1000);
+
+    // ==== calc-core:start（tests/calc.test.cjs 会把这一段原样抽出来测，别往里放 DOM 代码）====
+    // 时间点一律用 {year, month, day, hour, minute, second} 表示，按 UTC 计算（北京时间没有夏令时，不会差一小时）。
+    // 结果只在公元 1–9999 年内显示：超出就是四位年份放不下、也没有现实意义的数
+    const CALC_MIN_YEAR = 1, CALC_MAX_YEAR = 9999;
+    const SLEEP_CYCLE_MINUTES = 90;   // 一个睡眠周期按 90 分钟计（通行的近似值，实际因人而异）
+
+    // 不用 Date.UTC(y, ...)：它会把 0–99 年当成 1900–1999 年
+    function pointToMs(p) {
+        const t = new Date(0);
+        t.setUTCFullYear(p.year, p.month - 1, p.day);
+        t.setUTCHours(p.hour, p.minute, p.second, 0);
+        return t.getTime();
+    }
+    function msToPoint(ms) {
+        const t = new Date(ms);
+        return { year: t.getUTCFullYear(), month: t.getUTCMonth() + 1, day: t.getUTCDate(),
+                 hour: t.getUTCHours(), minute: t.getUTCMinutes(), second: t.getUTCSeconds() };
+    }
+    function daysInMonthOf(year, month) {
+        return msToPoint(pointToMs({ year: year, month: month + 1, day: 0, hour: 0, minute: 0, second: 0 })).day;
+    }
+
+    // 加减整月：日子不够就停在当月最后一天（1月31日 + 1个月 = 2月28日），不往下个月溢出。
+    // 年按 12 个月处理，所以 2024-02-29 + 1 年 = 2025-02-28
+    function addMonthsClamped(p, n) {
+        const total = p.year * 12 + (p.month - 1) + n;
+        const year = Math.floor(total / 12);
+        const month = total - year * 12 + 1;
+        return { year: year, month: month, day: Math.min(p.day, daysInMonthOf(year, month)),
+                 hour: p.hour, minute: p.minute, second: p.second };
+    }
+
+    // 推算：先加减年月（月末收敛），再加减定长的日/时/分/秒/睡眠周期。超出可显示范围返回 null
+    function addDuration(p, dur, sign) {
+        const moved = addMonthsClamped(p, sign * (dur.years * 12 + dur.months));
+        const seconds = dur.days * 86400 + dur.hours * 3600 + dur.minutes * 60 + dur.seconds
+                      + dur.sleepCycles * SLEEP_CYCLE_MINUTES * 60;
+        const ms = pointToMs(moved) + sign * seconds * 1000;
+        if (!isFinite(ms) || Math.abs(ms) > 8.64e15) return null;
+        const out = msToPoint(ms);
+        return (out.year < CALC_MIN_YEAR || out.year > CALC_MAX_YEAR) ? null : out;
+    }
+
+    // 间隔：拆成「整月数 + 剩余时长」，跟上面的推算互逆——
+    // 从开始时间按 addDuration 加上这个结果，一定正好落在结束时间（测试里逐条核对这一点）
+    function diffPoints(a, b) {
+        let negative = false;
+        if (pointToMs(a) > pointToMs(b)) { const t = a; a = b; b = t; negative = true; }
+        let months = (b.year - a.year) * 12 + (b.month - a.month);
+        let anchor = addMonthsClamped(a, months);
+        if (pointToMs(anchor) > pointToMs(b)) { months -= 1; anchor = addMonthsClamped(a, months); }
+        let rest = Math.round((pointToMs(b) - pointToMs(anchor)) / 1000);
+        const days = Math.floor(rest / 86400); rest -= days * 86400;
+        const hours = Math.floor(rest / 3600); rest -= hours * 3600;
+        const minutes = Math.floor(rest / 60);
+        return { negative: negative, years: Math.floor(months / 12), months: months % 12,
+                 days: days, hours: hours, minutes: minutes, seconds: rest - minutes * 60,
+                 totalMs: pointToMs(b) - pointToMs(a) };
+    }
+
+    // 只显示非零的单位：「2天」而不是「2天0小时0分钟0秒」
+    function formatDiffText(d) {
+        const units = [[d.years, '年'], [d.months, '个月'], [d.days, '天'],
+                       [d.hours, '小时'], [d.minutes, '分钟'], [d.seconds, '秒']];
+        const text = units.filter(u => u[0] > 0).map(u => u[0] + u[1]).join('');
+        if (!text) return '时间完全相同';
+        return (d.negative ? '相差(反向) ' : '相差 ') + text;
+    }
+    // ==== calc-core:end ====
 
     function formatDateTimeHtml(obj, placeholderText) {
         const svgIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>`;
@@ -743,9 +829,6 @@
         document.getElementById('baseTrigger').innerHTML = formatDateTimeHtml(null, '请选择时间...');
         document.getElementById('resultDateTime').textContent = "--";
     }
-
-    // 一个睡眠周期按 90 分钟计（通行的近似值，实际因人而异）
-    const SLEEP_CYCLE_MINUTES = 90;
 
     function resetAdjustments() {
         const ids = ['valY', 'valM', 'valD', 'valh', 'valm', 'vals', 'valSleep'];
@@ -784,54 +867,28 @@
         calculate();
     }
 
-    function getVal(id) { const val = parseInt(document.getElementById(id).value, 10); return isNaN(val) ? 0 : val; }
+    // 方向只由「往后推 / 往前推」决定，粘贴进来的负数按 0 处理，不让它偷偷反转方向
+    function getVal(id) { const val = parseInt(document.getElementById(id).value, 10); return isNaN(val) || val < 0 ? 0 : val; }
 
     function calculate() {
         updateSleepTotal();
-        if (!dates.base) { document.getElementById('resultDateTime').textContent = "--";
-        return; }
-        let calcDate = new Date(Date.UTC(dates.base.year, dates.base.month - 1, dates.base.day, dates.base.hour, dates.base.minute, dates.base.second));
-        let multi = currentMode === 'add' ? 1 : -1;
-        calcDate.setUTCFullYear(calcDate.getUTCFullYear() + (getVal('valY') * multi));
-        calcDate.setUTCMonth(calcDate.getUTCMonth() + (getVal('valM') * multi));
-        calcDate.setUTCDate(calcDate.getUTCDate() + (getVal('valD') * multi));
-        calcDate.setUTCHours(calcDate.getUTCHours() + (getVal('valh') * multi));
-        calcDate.setUTCMinutes(calcDate.getUTCMinutes() + (getVal('valm') * multi));
-        calcDate.setUTCSeconds(calcDate.getUTCSeconds() + (getVal('vals') * multi));
-        calcDate.setUTCMinutes(calcDate.getUTCMinutes() + (getVal('valSleep') * SLEEP_CYCLE_MINUTES * multi));
-        const outYear = calcDate.getUTCFullYear();
-        const outMonth = String(calcDate.getUTCMonth() + 1).padStart(2, '0');
-        const outDay = String(calcDate.getUTCDate()).padStart(2, '0');
-        const outHour = String(calcDate.getUTCHours()).padStart(2, '0');
-        const outMin = String(calcDate.getUTCMinutes()).padStart(2, '0');
-        const outSec = String(calcDate.getUTCSeconds()).padStart(2, '0');
-
-        document.getElementById('resultDateTime').textContent = `${outYear}年${outMonth}月${outDay}日 ${outHour}:${outMin}:${outSec}`;
+        const out = document.getElementById('resultDateTime');
+        if (!dates.base) { out.textContent = "--"; return; }
+        const r = addDuration(dates.base, {
+            years: getVal('valY'), months: getVal('valM'), days: getVal('valD'),
+            hours: getVal('valh'), minutes: getVal('valm'), seconds: getVal('vals'),
+            sleepCycles: getVal('valSleep')
+        }, currentMode === 'add' ? 1 : -1);
+        if (!r) { out.textContent = `超出可计算范围（公元 ${CALC_MIN_YEAR}–${CALC_MAX_YEAR} 年）`; return; }
+        out.textContent = `${r.year}年${pad2(r.month)}月${pad2(r.day)}日 ${pad2(r.hour)}:${pad2(r.minute)}:${pad2(r.second)}`;
     }
 
-    // ================= 模块二：日期间隔计算新增/修改功能 =================
-    
-    // 给右上角按钮使用：将开始和结束时间都设置为当前时刻
-    function setBothDiffToNow() {
-        const now = getBeijingTimeObj();
-        dates.diffStart = {...now};
-        dates.diffEnd = {...now};
-        document.getElementById('diffStartTrigger').innerHTML = formatDateTimeHtml(dates.diffStart, '请选择开始时间...');
-        document.getElementById('diffEndTrigger').innerHTML = formatDateTimeHtml(dates.diffEnd, '请选择结束时间...');
-        calculateDiff();
-    }
+    // ================= 模块二：日期时间间隔 =================
 
-    // 给开始时间大按钮使用：仅将开始时间设置为当前时刻
+    // 标题行「当前时刻」按钮：只把开始时间设为此刻
     function setDiffStartToNow() {
         dates.diffStart = getBeijingTimeObj();
         document.getElementById('diffStartTrigger').innerHTML = formatDateTimeHtml(dates.diffStart, '请选择开始时间...');
-        calculateDiff();
-    }
-
-    // 给开始时间大按钮使用：仅清除开始时间
-    function clearDiffStart() {
-        dates.diffStart = null;
-        document.getElementById('diffStartTrigger').innerHTML = formatDateTimeHtml(null, '请选择开始时间...');
         calculateDiff();
     }
 
@@ -851,78 +908,16 @@
             return;
         }
 
-        let start = dates.diffStart;
-        let end = dates.diffEnd;
-        let isNegative = false;
+        const d = diffPoints(dates.diffStart, dates.diffEnd);
+        document.getElementById('diffResultValue').textContent = formatDiffText(d);
 
-        let d1 = new Date(Date.UTC(start.year, start.month-1, start.day, start.hour, start.minute, start.second));
-        let d2 = new Date(Date.UTC(end.year, end.month-1, end.day, end.hour, end.minute, end.second));
-
-        let calcStart = {...start};
-        let calcEnd = {...end};
-        if (d1 > d2) {
-            calcStart = {...end};
-            calcEnd = {...start};
-            isNegative = true;
-        }
-
-        let years = calcEnd.year - calcStart.year;
-        let months = calcEnd.month - calcStart.month;
-        let days = calcEnd.day - calcStart.day;
-        let hours = calcEnd.hour - calcStart.hour;
-        let minutes = calcEnd.minute - calcStart.minute;
-        let seconds = calcEnd.second - calcStart.second;
-
-        if (seconds < 0) { seconds += 60; minutes -= 1; }
-        if (minutes < 0) { minutes += 60; hours -= 1; }
-        if (hours < 0) { hours += 24; days -= 1; }
-        if (days < 0) {
-            let prevMonth = calcEnd.month - 1;
-            let prevYear = calcEnd.year;
-            if (prevMonth === 0) { prevMonth = 12; prevYear -= 1; }
-            let daysInPrevMonth = new Date(Date.UTC(prevYear, prevMonth, 0)).getUTCDate();
-            days += daysInPrevMonth;
-            months -= 1;
-        }
-        if (months < 0) { months += 12; years -= 1; }
-
-        const allUnits = [
-            { val: years, name: '年' },
-            { val: months, name: '个月' },
-            { val: days, name: '天' },
-            { val: hours, name: '小时' },
-            { val: minutes, name: '分钟' },
-            { val: seconds, name: '秒' }
-        ];
-        let firstNonZero = -1;
-        for (let i = 0; i < allUnits.length; i++) {
-            if (allUnits[i].val > 0) {
-                if (firstNonZero === -1) firstNonZero = i;
-            }
-        }
-
-        let fullStr = "";
-        let prefix = isNegative ? "相差(反向) " : "相差 ";
-        if (firstNonZero === -1) {
-            fullStr = "时间完全相同";
-            prefix = "";
-        } else {
-            let parts = [];
-            for (let i = firstNonZero; i <= 5; i++) {
-                parts.push(`${allUnits[i].val}${allUnits[i].name}`);
-            }
-            fullStr = parts.join('');
-        }
-
-        document.getElementById('diffResultValue').textContent = prefix + fullStr;
-
-        let diffMs = Math.abs(d2.getTime() - d1.getTime());
-        let totS = diffMs / 1000;
-        let totMin = totS / 60;
-        let totH = totMin / 60;
-        let totD = totH / 24;
-        let totM = totD / 30.4166667; 
-        let totY = totD / 365;
+        // 折合值：天及以下是精确的；年、月长短不一，按 365 天 / 365÷12 天折算（界面上标了 ≈）
+        const totS = Math.abs(d.totalMs) / 1000;
+        const totMin = totS / 60;
+        const totH = totMin / 60;
+        const totD = totH / 24;
+        const totM = totD / (365 / 12);
+        const totY = totD / 365;
         const fmt = val => parseFloat(val.toFixed(3));
 
         document.getElementById('totS').textContent = fmt(totS);
@@ -944,12 +939,12 @@
         H: 3600,
         Min: 60,
         S: 1,
-        Cycle: 5400
+        Cycle: SLEEP_CYCLE_MINUTES * 60
     };
     function runConversion(sourceUnit) {
         const inputStr = document.getElementById('conv' + sourceUnit).value;
         let val = parseFloat(inputStr);
-        if (isNaN(val)) val = 0;
+        if (isNaN(val) || val < 0) val = 0;   // 时长没有负数；减号键已拦下，这里兜住粘贴进来的
 
         let baseSeconds = val * CONV_RATES[sourceUnit];
         const units = ['Y', 'M', 'W', 'D', 'H', 'Min', 'S', 'Cycle'];
@@ -1406,8 +1401,17 @@
             el.classList.add('ptr-animate', 'ptr-loading');
             el.style.transform = 'translateY(' + threshold() + 'px)';
             try { sessionStorage.setItem('ptr-fired', String(Date.now())); } catch (err) {}
+            savePageState();   // 刷新不能把已经填好的日期和数字一起冲掉
             // 留一下 spinner，否则直接白屏像卡死
             setTimeout(function () { location.reload(); }, 260);
+        }, { passive: true });
+
+        // 来电、系统手势等会打断触摸，此时没有 touchend：不收尾的话指示器会停在半空
+        document.addEventListener('touchcancel', function () {
+            if (refreshing) return;
+            pulling = false;
+            locked = false;
+            reset(true);
         }, { passive: true });
     }
 
@@ -1523,28 +1527,29 @@
         const firstDayDate = new Date(Date.UTC(viewYear, viewMonth - 1, 1));
         let startDayOfWeek = firstDayDate.getUTCDay(); 
         startDayOfWeek = startDayOfWeek === 0 ? 7 : startDayOfWeek; 
-        const daysInMonth = new Date(Date.UTC(viewYear, viewMonth, 0)).getUTCDate();
+        const daysInMonth = daysInMonthOf(viewYear, viewMonth);
+        // 选了 31 号再切到小月：收到当月最后一天，否则会存进「2月31日」这种不存在的日期
+        if (selectedDay > daysInMonth) selectedDay = daysInMonth;
         const actualToday = getBeijingTimeObj();
         const isCurrentMonthYear = (actualToday.year === viewYear && actualToday.month === viewMonth);
         const daysContainer = document.getElementById('modalDays');
-        daysContainer.innerHTML = '';
-        for (let i = 1; i < startDayOfWeek; i++) { daysContainer.innerHTML += `<div class="empty"></div>`;
-        }
+        let html = '';
+        for (let i = 1; i < startDayOfWeek; i++) html += `<div class="empty"></div>`;
         for (let i = 1; i <= daysInMonth; i++) {
             const isSelected = (i === selectedDay);
             const isActualToday = (isCurrentMonthYear && i === actualToday.day);
             let classNames = [];
             if (isSelected) classNames.push('selected');
             if (isActualToday) classNames.push('today');
-            daysContainer.innerHTML += `<div class="${classNames.join(' ')}" onclick="selectDay(${i})">${i}</div>`;
+            html += `<div class="${classNames.join(' ')}" onclick="selectDay(${i})"><span>${i}</span></div>`;
         }
+        daysContainer.innerHTML = html;
     }
 
     function confirmModal() {
-        const h = parseInt(document.getElementById('modalH').value) || 0;
-        const m = parseInt(document.getElementById('modalM').value) || 0;
-        const s = parseInt(document.getElementById('modalS').value) || 0;
-        dates[currentModalTarget] = { year: viewYear, month: viewMonth, day: selectedDay, hour: Math.min(23, h), minute: Math.min(59, m), second: Math.min(59, s) };
+        const read = (id, max) => Math.min(max, Math.max(0, parseInt(document.getElementById(id).value, 10) || 0));
+        dates[currentModalTarget] = { year: viewYear, month: viewMonth, day: selectedDay,
+                                      hour: read('modalH', 23), minute: read('modalM', 59), second: read('modalS', 59) };
         const triggerId = currentModalTarget + 'Trigger';
         const placeholderText = currentModalTarget.includes('Start') ? '请选择开始时间...' : (currentModalTarget.includes('End') ? '请选择结束时间...' : '请选择时间...');
         document.getElementById(triggerId).innerHTML = formatDateTimeHtml(dates[currentModalTarget], placeholderText);
@@ -1563,16 +1568,109 @@
                     this.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }, 300);
             });
+            // 这些框填的都是时长/时刻，不会有负数和科学计数法；number 框默认放行 - + e
+            input.addEventListener('keydown', e => {
+                if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E') e.preventDefault();
+            });
         });
+    }
+
+    // 日期弹窗：点遮罩或按 Esc 关闭（等同「取消」），以及弹窗打开时锁住背后的页面
+    function setupModalBehavior() {
+        const overlay = document.getElementById('datePickerModal');
+        const isOpen = () => overlay.classList.contains('show');
+
+        // 按下和抬起都落在遮罩上才算「点遮罩」：从弹窗里按下拖到外面松手（比如选字）不该关
+        let downOnOverlay = false;
+        overlay.addEventListener('pointerdown', e => { downOnOverlay = (e.target === overlay); });
+        overlay.addEventListener('click', e => {
+            if (e.target === overlay && downOnOverlay) closeModal();
+            downOnOverlay = false;
+        });
+        document.addEventListener('keydown', e => { if (e.key === 'Escape' && isOpen()) closeModal(); });
+
+        // 遮罩本身不能滚，手指在它上面拖时浏览器会把滚动交给背后的整页——
+        // 于是隔着弹窗也能滑动主界面。这里在遮罩层拦下：只有手指下面有容器
+        // 「还能往这个方向滚」（年份下拉、矮屏上的弹窗本身）才放行，其余一律不滚。
+        // 光看「能不能滚」不够：弹窗已经滚到顶还往下拉，浏览器照样把这一下交给背后的页面
+        // （320×568 实测踩过）。而且滚动一开始，后续 touchmove 就取消不了了，所以每次都要判断。
+        // 不用「给 body 设 position:fixed」那套锁法：会让吸顶导航条跳位
+        // delta > 0 = 内容要往下滚（手指上滑 / 滚轮向下）
+        function canScrollToward(el, delta) {
+            for (; el && el !== overlay; el = el.parentElement) {
+                const oy = getComputedStyle(el).overflowY;
+                if ((oy !== 'auto' && oy !== 'scroll') || el.scrollHeight <= el.clientHeight) continue;
+                if (delta > 0 && el.scrollTop + el.clientHeight < el.scrollHeight - 1) return true;
+                if (delta < 0 && el.scrollTop > 0) return true;
+            }
+            return false;
+        }
+        // 按手指实际坐标取元素，不用 e.target：手指落在弹窗边缘外几像素时，浏览器会把触摸事件的
+        // target「吸附」到附近的按钮上，但真正决定滚谁时用的是实际坐标（落在遮罩上 → 滚整页）
+        let lastY = 0, startEl = null;
+        overlay.addEventListener('touchstart', e => {
+            const t = e.touches[0];
+            lastY = t.clientY;
+            startEl = document.elementFromPoint(t.clientX, t.clientY);
+        }, { passive: true });
+        overlay.addEventListener('touchmove', e => {
+            const y = e.touches[0].clientY;
+            const delta = lastY - y;
+            lastY = y;
+            if (delta === 0 || !isOpen()) return;   // 纯横向拖动不会带动页面（页面没有横向滚动）
+            if (!canScrollToward(startEl, delta)) e.preventDefault();
+        }, { passive: false });
+        overlay.addEventListener('wheel', e => {
+            if (isOpen() && !canScrollToward(e.target, e.deltaY)) e.preventDefault();
+        }, { passive: false });
+    }
+
+    // ---- 下拉刷新时保住已填的内容 ----
+    // 只在下拉刷新那一刻存、重新加载后读一次就删：平时打开页面仍是全新的「此刻」，
+    // 不会把上次的旧时间一直带着。sessionStorage 关掉标签页就清
+    const PTR_STATE_KEY = 'dc-ptr-state';
+    const ADJUST_IDS = ['valY', 'valM', 'valD', 'valh', 'valm', 'vals', 'valSleep'];
+    const CONV_IDS = ['convY', 'convM', 'convW', 'convD', 'convH', 'convMin', 'convS', 'convCycle'];
+
+    function savePageState() {
+        const state = { dates: dates, mode: currentMode, lunar: lunarCardDate, inputs: {} };
+        ADJUST_IDS.concat(CONV_IDS).forEach(id => { state.inputs[id] = document.getElementById(id).value; });
+        try { sessionStorage.setItem(PTR_STATE_KEY, JSON.stringify(state)); } catch (err) {}
+    }
+
+    // 读到就恢复并返回 true；没有、读不了或内容不对就返回 false，按全新页面初始化
+    function restorePageState() {
+        let state = null;
+        try {
+            state = JSON.parse(sessionStorage.getItem(PTR_STATE_KEY));
+            sessionStorage.removeItem(PTR_STATE_KEY);
+        } catch (err) { return false; }
+        if (!state || !state.dates || !state.inputs) return false;
+        ADJUST_IDS.concat(CONV_IDS).forEach(id => {
+            if (typeof state.inputs[id] === 'string') document.getElementById(id).value = state.inputs[id];
+        });
+        ['base', 'diffStart', 'diffEnd'].forEach(k => { dates[k] = state.dates[k] || null; });
+        document.getElementById('baseTrigger').innerHTML = formatDateTimeHtml(dates.base, '请选择时间...');
+        document.getElementById('diffStartTrigger').innerHTML = formatDateTimeHtml(dates.diffStart, '请选择开始时间...');
+        document.getElementById('diffEndTrigger').innerHTML = formatDateTimeHtml(dates.diffEnd, '请选择结束时间...');
+        setMode(state.mode === 'subtract' ? 'subtract' : 'add');   // 内含 calculate()
+        calculateDiff();
+        const l = state.lunar;
+        if (l && inLunarRange(l.year, l.month, l.day)) setLunarCardDate(l.year, l.month, l.day);
+        else setLunarToToday();
+        return true;
     }
 
     window.onload = () => {
         populateDropdowns();
-        setBaseToNow();
-        setDiffStartToNow();
-        setLunarToToday();
+        if (!restorePageState()) {
+            setBaseToNow();
+            setDiffStartToNow();
+            setLunarToToday();
+        }
         setupSectionNav();
         initKeyboardFix();
+        setupModalBehavior();
         setupPullToRefresh();
         document.addEventListener('click', closeLunarMenus);
     };
