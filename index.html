@@ -229,19 +229,14 @@
         .weekdays, .days { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; gap: 4px; position: relative; z-index: 1; }
         .weekdays span { font-size: 12px; color: var(--text-secondary); font-weight: 500; margin-bottom: 6px; }
         /* 外层格子 44px 高管点击（触摸标准），里面的正圆管显示：
-           窄屏上格子只有 33px 宽，直接给格子画圆会变成竖椭圆 */
-        /* 每格：上面数字（正圆，选中时填色），下面一行农历小字。
-           圆从 40 缩到 34、格子从 44 加到 46（= 圆 34 + 小字 12）：整张日历只高出 12px（6 行），
-           Safari 有工具栏时可视高度比屏幕矮一截，弹窗超出这个高度就得自己滚，所以每一行都尽量省 */
-        .days div { height: 46px; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; }
+           窄屏上格子只有 33px 宽，直接给格子画圆会变成竖椭圆。
+           2026-10-14 试过每格下面加农历小字，用户嫌太乱撤掉了；农历只在下方信息行里给 */
+        .days div { height: 44px; display: flex; justify-content: center; align-items: center; cursor: pointer; }
         .days div.empty { cursor: default; }
-        .days div span { width: min(34px, 100%); aspect-ratio: 1; display: flex; justify-content: center; align-items: center; font-size: 17px; font-weight: 500; border-radius: 50%; transition: background-color 0.2s; }
+        .days div span { width: min(40px, 100%); aspect-ratio: 1; display: flex; justify-content: center; align-items: center; font-size: 17px; font-weight: 500; border-radius: 50%; transition: background-color 0.2s; }
         .days div:active span { background-color: var(--segment-bg); }
         .days div.selected span { background-color: var(--accent-color); color: white; font-weight: 700; box-shadow: 0 4px 10px rgba(0,122,255,0.3); }
         .days div.today:not(.selected) span { color: var(--accent-color); font-weight: 700; }
-        /* 11px 是 Apple HIG 的最小字号；最长的「闰六月」三个字 33px，正好等于 320 档格宽，不会被裁 */
-        .days div small { font-size: 11px; line-height: 12px; height: 12px; color: var(--text-secondary); white-space: nowrap; }
-        .days div.selected small { color: var(--accent-color); font-weight: 600; }
 
         /* 选中日期的详细信息：星期 / 农历 / 距今 */
         .picked-info { display: flex; align-items: center; gap: 10px; margin-top: 8px; padding: 6px 12px; border-radius: 12px; background: rgba(142, 142, 147, 0.12); }
@@ -251,7 +246,7 @@
         /* 只是状态文字，不加底色：加了就跟顶部「今天」按钮长得一样，会被当成按钮去点 */
         .picked-rel { flex: none; font-size: 14px; font-weight: 700; white-space: nowrap; color: var(--accent-color); }
 
-        .time-picker-header { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(142, 142, 147, 0.2); }
+        .time-picker-header { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(142, 142, 147, 0.2); }
         .time-picker-title { font-size: 13px; color: var(--text-secondary); font-weight: 600; }
         .btn-time-zero { background-color: rgba(142, 142, 147, 0.15); color: var(--text-secondary); border: none; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; transition: 0.2s; }
         .btn-time-zero:active { background-color: rgba(142, 142, 147, 0.25); color: var(--text-main); }
@@ -1124,12 +1119,6 @@
     function lunarOfSolar(y, m, d) {
         return inLunarRange(y, m, d) ? solarToLunar(y, m, d) : null;
     }
-    // 日历格子下的农历小字：初一显示月份（如「九月」「闰六月」），其余显示日子，月份的分界一眼可见
-    function lunarCellLabel(y, m, d) {
-        const l = lunarOfSolar(y, m, d);
-        if (!l) return '';
-        return l.day === 1 ? lunarMonthToChinese(l.month, l.isLeap) : lunarDayToChinese(l.day);
-    }
     // 距今：按北京时间的日历日算，不看时分秒
     function relativeDayText(y, m, d) {
         const t = getBeijingTimeObj();
@@ -1592,7 +1581,7 @@
             let classNames = [];
             if (isSelected) classNames.push('selected');
             if (isActualToday) classNames.push('today');
-            html += `<div class="${classNames.join(' ')}" onclick="selectDay(${i})"><span>${i}</span><small>${lunarCellLabel(viewYear, viewMonth, i)}</small></div>`;
+            html += `<div class="${classNames.join(' ')}" onclick="selectDay(${i})"><span>${i}</span></div>`;
         }
         daysContainer.innerHTML = html;
         renderPickedInfo();
