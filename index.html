@@ -109,6 +109,8 @@
         
         .custom-datetime-trigger { width: 100%; padding: 16px; font-size: 18px; font-weight: 600; border-radius: 14px; background-color: var(--input-bg); color: var(--text-main); margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: opacity 0.2s; }
         .custom-datetime-trigger:active { opacity: 0.7; }
+        .custom-datetime-trigger .dt-text { min-width: 0; }
+        .custom-datetime-trigger .dt-sub { display: block; margin-top: 4px; font-size: 13px; font-weight: 500; color: var(--text-secondary); }
         .placeholder { color: var(--text-secondary); font-weight: 400; }
 
         .action-row { display: flex; gap: 12px; }
@@ -228,14 +230,28 @@
         .weekdays span { font-size: 12px; color: var(--text-secondary); font-weight: 500; margin-bottom: 6px; }
         /* 外层格子 44px 高管点击（触摸标准），里面的正圆管显示：
            窄屏上格子只有 33px 宽，直接给格子画圆会变成竖椭圆 */
-        .days div { height: 44px; display: flex; justify-content: center; align-items: center; cursor: pointer; }
+        /* 每格：上面数字（正圆，选中时填色），下面一行农历小字。
+           圆从 40 缩到 34、格子从 44 加到 46（= 圆 34 + 小字 12）：整张日历只高出 12px（6 行），
+           Safari 有工具栏时可视高度比屏幕矮一截，弹窗超出这个高度就得自己滚，所以每一行都尽量省 */
+        .days div { height: 46px; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; }
         .days div.empty { cursor: default; }
-        .days div span { width: min(40px, 100%); aspect-ratio: 1; display: flex; justify-content: center; align-items: center; font-size: 17px; font-weight: 500; border-radius: 50%; transition: background-color 0.2s; }
+        .days div span { width: min(34px, 100%); aspect-ratio: 1; display: flex; justify-content: center; align-items: center; font-size: 17px; font-weight: 500; border-radius: 50%; transition: background-color 0.2s; }
         .days div:active span { background-color: var(--segment-bg); }
         .days div.selected span { background-color: var(--accent-color); color: white; font-weight: 700; box-shadow: 0 4px 10px rgba(0,122,255,0.3); }
         .days div.today:not(.selected) span { color: var(--accent-color); font-weight: 700; }
+        /* 11px 是 Apple HIG 的最小字号；最长的「闰六月」三个字 33px，正好等于 320 档格宽，不会被裁 */
+        .days div small { font-size: 11px; line-height: 12px; height: 12px; color: var(--text-secondary); white-space: nowrap; }
+        .days div.selected small { color: var(--accent-color); font-weight: 600; }
 
-        .time-picker-header { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(142, 142, 147, 0.2); }
+        /* 选中日期的详细信息：星期 / 农历 / 距今 */
+        .picked-info { display: flex; align-items: center; gap: 10px; margin-top: 8px; padding: 6px 12px; border-radius: 12px; background: rgba(142, 142, 147, 0.12); }
+        .picked-text { flex: 1; min-width: 0; }
+        .picked-main { font-size: 15px; font-weight: 700; color: var(--text-main); line-height: 1.3; }
+        .picked-sub { font-size: 12px; color: var(--text-secondary); line-height: 1.35; margin-top: 1px; }
+        /* 只是状态文字，不加底色：加了就跟顶部「今天」按钮长得一样，会被当成按钮去点 */
+        .picked-rel { flex: none; font-size: 14px; font-weight: 700; white-space: nowrap; color: var(--accent-color); }
+
+        .time-picker-header { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(142, 142, 147, 0.2); }
         .time-picker-title { font-size: 13px; color: var(--text-secondary); font-weight: 600; }
         .btn-time-zero { background-color: rgba(142, 142, 147, 0.15); color: var(--text-secondary); border: none; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; transition: 0.2s; }
         .btn-time-zero:active { background-color: rgba(142, 142, 147, 0.25); color: var(--text-main); }
@@ -673,7 +689,15 @@
         
         <div class="weekdays"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>
         <div class="days" id="modalDays"></div>
-        
+
+        <div class="picked-info" aria-live="polite">
+            <div class="picked-text">
+                <div class="picked-main" id="pickedMain"></div>
+                <div class="picked-sub" id="pickedSub"></div>
+            </div>
+            <div class="picked-rel" id="pickedRel"></div>
+        </div>
+
         <div class="time-picker-header">
             <div class="time-picker-title">精确时间</div>
             <div class="time-picker-actions">
@@ -818,7 +842,11 @@
         const svgIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>`;
         if (!obj) return `<span class="placeholder">${placeholderText}</span>` + svgIcon;
         const text = `${obj.year}年${String(obj.month).padStart(2,'0')}月${String(obj.day).padStart(2,'0')}日 ${String(obj.hour).padStart(2,'0')}:${String(obj.minute).padStart(2,'0')}:${String(obj.second).padStart(2,'0')}`;
-        return `<span>${text}</span>` + svgIcon;
+        // 第二行小字：星期 + 农历（超出农历数据范围就只给星期）
+        const lunar = lunarOfSolar(obj.year, obj.month, obj.day);
+        const sub = '星期' + solarWeekdayCn(obj.year, obj.month, obj.day) +
+                    (lunar ? ' · 农历' + lunarMonthToChinese(lunar.month, lunar.isLeap) + lunarDayToChinese(lunar.day) : '');
+        return `<span class="dt-text">${text}<span class="dt-sub">${sub}</span></span>` + svgIcon;
     }
 
     // ================= 模块一：日期推算控制 =================
@@ -1091,6 +1119,25 @@
     }
     function solarWeekdayCn(y, m, d) {
         return WEEKDAY_CN[new Date(Date.UTC(y, m - 1, d)).getUTCDay()];
+    }
+    // 公历 → 农历，超出数据表范围返回 null（日期弹窗、输入框用）
+    function lunarOfSolar(y, m, d) {
+        return inLunarRange(y, m, d) ? solarToLunar(y, m, d) : null;
+    }
+    // 日历格子下的农历小字：初一显示月份（如「九月」「闰六月」），其余显示日子，月份的分界一眼可见
+    function lunarCellLabel(y, m, d) {
+        const l = lunarOfSolar(y, m, d);
+        if (!l) return '';
+        return l.day === 1 ? lunarMonthToChinese(l.month, l.isLeap) : lunarDayToChinese(l.day);
+    }
+    // 距今：按北京时间的日历日算，不看时分秒
+    function relativeDayText(y, m, d) {
+        const t = getBeijingTimeObj();
+        const n = Math.round((Date.UTC(y, m - 1, d) - Date.UTC(t.year, t.month - 1, t.day)) / MS_PER_DAY);
+        if (n === 0) return '今天';
+        if (n === 1) return '明天';
+        if (n === -1) return '昨天';
+        return n > 0 ? n + ' 天后' : (-n) + ' 天前';
     }
     function daysInSolarMonth(y, m) {
         return new Date(Date.UTC(y, m, 0)).getUTCDate();
@@ -1545,9 +1592,24 @@
             let classNames = [];
             if (isSelected) classNames.push('selected');
             if (isActualToday) classNames.push('today');
-            html += `<div class="${classNames.join(' ')}" onclick="selectDay(${i})"><span>${i}</span></div>`;
+            html += `<div class="${classNames.join(' ')}" onclick="selectDay(${i})"><span>${i}</span><small>${lunarCellLabel(viewYear, viewMonth, i)}</small></div>`;
         }
         daysContainer.innerHTML = html;
+        renderPickedInfo();
+    }
+
+    // 日历下方那一行：选中日期的星期 / 农历 / 距今。点日子、翻月、点「今天」、打开弹窗都经过 renderCalendar，所以只在这一处更新
+    function renderPickedInfo() {
+        const y = viewYear, m = viewMonth, d = selectedDay;
+        document.getElementById('pickedMain').textContent = m + '月' + d + '日 星期' + solarWeekdayCn(y, m, d);
+        const l = lunarOfSolar(y, m, d);
+        let sub;
+        if (l) sub = '农历' + lunarMonthToChinese(l.month, l.isLeap) + lunarDayToChinese(l.day) +
+                     ' · ' + ganzhiOfLunarYear(l.year) + zodiacOfLunarYear(l.year) + '年';
+        else if (Date.UTC(y, m - 1, d) < LUNAR_RANGE.minMs) sub = '农历数据从 ' + LUNAR_RANGE.minText + ' 开始';
+        else sub = '农历数据到 ' + LUNAR_RANGE.maxText + ' 为止';
+        document.getElementById('pickedSub').textContent = sub;
+        document.getElementById('pickedRel').textContent = relativeDayText(y, m, d);
     }
 
     function confirmModal() {
