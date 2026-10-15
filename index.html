@@ -1459,7 +1459,10 @@
         }, { passive: true });
 
         document.addEventListener('touchmove', function (e) {
-            if (!pulling || refreshing) return;
+            // 刷新中锁住滚动：iOS Safari 从发起重新加载到新页面画出来之前会冻结页面绘制，
+            // 这时还能滑，但滑出来的新区域画不上去，就是「上半截有、下半截空白」
+            if (refreshing) { e.preventDefault(); return; }
+            if (!pulling) return;
             const dx = e.touches[0].clientX - startX;
             const dy = e.touches[0].clientY - startY;
             if (!locked) {
@@ -1485,6 +1488,12 @@
             savePageState();   // 刷新不能把已经填好的日期和数字一起冲掉
             // 留一下 spinner，否则直接白屏像卡死
             setTimeout(function () { location.reload(); }, 260);
+            // 兜底：重新加载被取消或一直卡着时，别让页面永远锁着滑不动
+            setTimeout(function () {
+                refreshing = false;
+                el.classList.remove('ptr-loading');
+                reset(true);
+            }, 10000);
         }, { passive: true });
 
         // 来电、系统手势等会打断触摸，此时没有 touchend：不收尾的话指示器会停在半空
