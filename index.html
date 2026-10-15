@@ -129,11 +129,17 @@
         .stepper-group { display: flex; flex-direction: column; align-items: center; }
         .stepper-group label { font-size: 13px; color: var(--text-secondary); font-weight: 600; margin-bottom: 8px; }
 
-        /* 睡眠周期跟年月日时分秒不是同一量纲，单独占满一行并标注换算关系 */
-        .sleep-cycle-group { grid-column: 1 / -1; margin-top: 4px; }
-        .sleep-cycle-group label { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; }
+        /* 周、睡眠周期是由别的单位折出来的，跟年月日时分秒分开、自成一行，各自标注换算关系 */
+        .derived-row { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, 1fr); gap: 0 8px; margin-top: 4px; }
+        /* 窄屏下「睡眠周期 1 周期 = 90 分钟」会折成两行：用 subgrid 让两列的标签/输入框/小计各占同一行，输入框始终对齐 */
+        @supports (grid-template-rows: subgrid) {
+            .derived-row > .stepper-group { display: grid; grid-row: span 3; grid-template-rows: subgrid; align-items: end; }
+            .derived-row > .stepper-group > .sleep-total { align-self: start; }
+        }
+        .derived-row label { display: flex; align-items: center; gap: 0 6px; flex-wrap: wrap; justify-content: center; text-align: center; }
         .sleep-hint { font-size: 12px; font-weight: 500; color: var(--text-secondary); opacity: 0.75; }
-        .sleep-total { font-size: 12px; font-weight: 600; color: var(--accent-color); margin-top: 6px; min-height: 16px; }
+        .sleep-total { font-size: 12px; font-weight: 600; color: var(--accent-color); margin-top: 6px; min-height: 16px; text-align: center; }
+        .sleep-total span { white-space: nowrap; }   /* 窄屏要折行时只在「=」前折，不把「30 分钟」拆开 */
         
         .stepper-control { display: flex; align-items: center; background-color: var(--input-bg); border-radius: 12px; width: 100%; height: 44px; overflow: hidden; transition: box-shadow 0.2s; }
         .stepper-control:focus-within { box-shadow: 0 0 0 2px var(--accent-color); }
@@ -457,14 +463,25 @@
                     <button class="stepper-btn" onclick="stepValue('vals', 1)">+</button>
                 </div>
             </div>
-            <div class="stepper-group sleep-cycle-group">
-                <label>睡眠周期 <span class="sleep-hint">1 周期 = 90 分钟</span></label>
-                <div class="stepper-control">
-                    <button class="stepper-btn" onclick="stepValue('valSleep', -1)">−</button>
-                    <input type="number" id="valSleep" value="0" min="0" oninput="calculate()">
-                    <button class="stepper-btn" onclick="stepValue('valSleep', 1)">+</button>
+            <div class="derived-row">
+                <div class="stepper-group">
+                    <label>周 <span class="sleep-hint">1 周 = 7 天</span></label>
+                    <div class="stepper-control">
+                        <button class="stepper-btn" onclick="stepValue('valW', -1)">−</button>
+                        <input type="number" id="valW" value="0" min="0" oninput="calculate()">
+                        <button class="stepper-btn" onclick="stepValue('valW', 1)">+</button>
+                    </div>
+                    <div class="sleep-total" id="weekTotal"></div>
                 </div>
-                <div class="sleep-total" id="sleepTotal"></div>
+                <div class="stepper-group">
+                    <label>睡眠周期 <span class="sleep-hint">1 周期 = 90 分钟</span></label>
+                    <div class="stepper-control">
+                        <button class="stepper-btn" onclick="stepValue('valSleep', -1)">−</button>
+                        <input type="number" id="valSleep" value="0" min="0" oninput="calculate()">
+                        <button class="stepper-btn" onclick="stepValue('valSleep', 1)">+</button>
+                    </div>
+                    <div class="sleep-total" id="sleepTotal"></div>
+                </div>
             </div>
         </div>
 
@@ -795,10 +812,10 @@
                  hour: p.hour, minute: p.minute, second: p.second };
     }
 
-    // 推算：先加减年月（月末收敛），再加减定长的日/时/分/秒/睡眠周期。超出可显示范围返回 null
+    // 推算：先加减年月（月末收敛），再加减定长的周/日/时/分/秒/睡眠周期。超出可显示范围返回 null
     function addDuration(p, dur, sign) {
         const moved = addMonthsClamped(p, sign * (dur.years * 12 + dur.months));
-        const seconds = dur.days * 86400 + dur.hours * 3600 + dur.minutes * 60 + dur.seconds
+        const seconds = (dur.weeks * 7 + dur.days) * 86400 + dur.hours * 3600 + dur.minutes * 60 + dur.seconds
                       + dur.sleepCycles * SLEEP_CYCLE_MINUTES * 60;
         const ms = pointToMs(moved) + sign * seconds * 1000;
         if (!isFinite(ms) || Math.abs(ms) > 8.64e15) return null;
@@ -858,8 +875,7 @@
     }
 
     function resetAdjustments() {
-        const ids = ['valY', 'valM', 'valD', 'valh', 'valm', 'vals', 'valSleep'];
-        ids.forEach(id => { document.getElementById(id).value = 0; });
+        ADJUST_IDS.forEach(id => { document.getElementById(id).value = 0; });
         calculate();
     }
 
@@ -883,7 +899,23 @@
         const h = Math.floor(totalMin / 60);
         const m = totalMin % 60;
         const sign = currentMode === 'add' ? '+' : '−';
-        el.textContent = `${sign} ${cycles} 个周期 = ${h} 小时${m ? ` ${m} 分钟` : ''}`;
+        setTotalText(el, `${sign} ${cycles} 个周期`, `= ${h} 小时${m ? ` ${m} 分钟` : ''}`);
+    }
+
+    // 小计分两段各自不折行，中间留一个可折行的空格
+    function setTotalText(el, left, right) {
+        const a = document.createElement('span'), b = document.createElement('span');
+        a.textContent = left; b.textContent = right;
+        el.replaceChildren(a, ' ', b);
+    }
+
+    // 周同理，折成天数显示
+    function updateWeekTotal() {
+        const el = document.getElementById('weekTotal');
+        if (!el) return;
+        const weeks = getVal('valW');
+        if (weeks <= 0) { el.textContent = ''; return; }
+        setTotalText(el, `${currentMode === 'add' ? '+' : '−'} ${weeks} 周`, `= ${weeks * 7} 天`);
     }
 
     function setMode(mode) {
@@ -899,10 +931,11 @@
 
     function calculate() {
         updateSleepTotal();
+        updateWeekTotal();
         const out = document.getElementById('resultDateTime');
         if (!dates.base) { out.textContent = "--"; return; }
         const r = addDuration(dates.base, {
-            years: getVal('valY'), months: getVal('valM'), days: getVal('valD'),
+            years: getVal('valY'), months: getVal('valM'), weeks: getVal('valW'), days: getVal('valD'),
             hours: getVal('valh'), minutes: getVal('valm'), seconds: getVal('vals'),
             sleepCycles: getVal('valSleep')
         }, currentMode === 'add' ? 1 : -1);
@@ -1684,7 +1717,7 @@
     // 只在下拉刷新那一刻存、重新加载后读一次就删：平时打开页面仍是全新的「此刻」，
     // 不会把上次的旧时间一直带着。sessionStorage 关掉标签页就清
     const PTR_STATE_KEY = 'dc-ptr-state';
-    const ADJUST_IDS = ['valY', 'valM', 'valD', 'valh', 'valm', 'vals', 'valSleep'];
+    const ADJUST_IDS = ['valY', 'valM', 'valW', 'valD', 'valh', 'valm', 'vals', 'valSleep'];
     const CONV_IDS = ['convY', 'convM', 'convW', 'convD', 'convH', 'convMin', 'convS', 'convCycle'];
 
     function savePageState() {

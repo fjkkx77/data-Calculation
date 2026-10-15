@@ -22,7 +22,7 @@ const P = (s) => {   // 'YYYY-MM-DD hh:mm:ss' → 时间点
 };
 const S = (p) => p && `${p.year}-${String(p.month).padStart(2, '0')}-${String(p.day).padStart(2, '0')} ` +
   `${String(p.hour).padStart(2, '0')}:${String(p.minute).padStart(2, '0')}:${String(p.second).padStart(2, '0')}`;
-const DUR0 = { years: 0, months: 0, days: 0, hours: 0, minutes: 0, seconds: 0, sleepCycles: 0 };
+const DUR0 = { years: 0, months: 0, weeks: 0, days: 0, hours: 0, minutes: 0, seconds: 0, sleepCycles: 0 };
 const dur = (o) => Object.assign({}, DUR0, o);
 
 test('加减月份：月末收敛到当月最后一天，不往下个月溢出', () => {
@@ -41,6 +41,24 @@ test('加减定长单位与睡眠周期', () => {
   assert.equal(S(addDuration(P('2026-03-01'), dur({ days: 1 }), -1)), '2026-02-28 00:00:00');
   // 先年月、后日：1月31日 +1月 +1天 = 3月1日（2月28日再加 1 天）
   assert.equal(S(addDuration(P('2026-01-31'), dur({ months: 1, days: 1 }), 1)), '2026-03-01 00:00:00');
+});
+
+test('加减周：1 周 = 7 天，跨月跨年；与年月同用时先年月后周', () => {
+  assert.equal(S(addDuration(P('2026-10-15 14:21:51'), dur({ weeks: 1 }), 1)), '2026-10-22 14:21:51');
+  assert.equal(S(addDuration(P('2026-12-28'), dur({ weeks: 2 }), 1)), '2027-01-11 00:00:00');
+  assert.equal(S(addDuration(P('2024-03-05'), dur({ weeks: 1 }), -1)), '2024-02-27 00:00:00');
+  assert.equal(S(addDuration(P('2026-10-15'), dur({ weeks: 52 }), 1)), '2027-10-14 00:00:00');
+  // 周和日叠加：2 周 + 3 天 = 17 天
+  assert.equal(S(addDuration(P('2026-10-15'), dur({ weeks: 2, days: 3 }), 1)), '2026-11-01 00:00:00');
+  // 1月31日 +1月 = 2月28日，再 +1 周 = 3月7日
+  assert.equal(S(addDuration(P('2026-01-31'), dur({ months: 1, weeks: 1 }), 1)), '2026-03-07 00:00:00');
+  // 往前推 n 周再往后推 n 周回到原点（逐个 n 核对）
+  for (let n = 1; n <= 600; n++) {
+    const a = P('2026-10-15 08:30:00');
+    assert.equal(S(addDuration(addDuration(a, dur({ weeks: n }), -1), dur({ weeks: n }), 1)), S(a));
+    assert.equal(S(addDuration(a, dur({ weeks: n }), 1)), S(addDuration(a, dur({ days: 7 * n }), 1)));
+  }
+  assert.equal(addDuration(P('2026-01-01'), dur({ weeks: 1e12 }), 1), null);
 });
 
 test('超出公元 1–9999 年返回 null，不再显示 NaN', () => {
@@ -85,7 +103,7 @@ test('间隔与推算互逆 + 每一位都在合法范围（随机 20000 组）'
     assert.ok(d.years >= 0 && d.days >= 0 && d.days <= 30, `${S(a)} → ${S(b)} 得 ${JSON.stringify(d)}`);
     const [from, to] = d.negative ? [b, a] : [a, b];
     const back = addDuration(from, { years: d.years, months: d.months, days: d.days, hours: d.hours,
-                                     minutes: d.minutes, seconds: d.seconds, sleepCycles: 0 }, 1);
+                                     minutes: d.minutes, seconds: d.seconds, weeks: 0, sleepCycles: 0 }, 1);
     assert.equal(S(back), S(to), `互逆失败：${S(from)} + ${formatDiffText(d)} ≠ ${S(to)}`);
     assert.equal(Math.abs(d.totalMs), Math.abs(pointToMs(b) - pointToMs(a)));
   }
