@@ -200,6 +200,8 @@
             word-wrap: break-word; /* 极其长的数字允许换行 */
         }
 
+        /* 7 格排成 3×3：秒的数字最长，单独占满最后一行（窄屏下三分之一宽会被拆成两行） */
+        .diff-total-item.span-row { grid-column: 1 / -1; }
         .diff-totals-note { grid-column: 1 / -1; font-size: 11px; opacity: 0.8; line-height: 1.5; margin-top: 2px; }
 
         /* ================= iOS 风格自定义日期选择器 ================= */
@@ -531,6 +533,10 @@
                     <div class="diff-total-val" id="totM">0</div>
                 </div>
                 <div class="diff-total-item">
+                    <div class="diff-total-label">周</div>
+                    <div class="diff-total-val" id="totW">0</div>
+                </div>
+                <div class="diff-total-item">
                     <div class="diff-total-label">天</div>
                     <div class="diff-total-val" id="totD">0</div>
                 </div>
@@ -542,7 +548,7 @@
                     <div class="diff-total-label">分</div>
                     <div class="diff-total-val" id="totMin">0</div>
                 </div>
-                <div class="diff-total-item">
+                <div class="diff-total-item span-row">
                     <div class="diff-total-label">秒</div>
                     <div class="diff-total-val" id="totS">0</div>
                 </div>
@@ -976,6 +982,7 @@
         const totMin = totS / 60;
         const totH = totMin / 60;
         const totD = totH / 24;
+        const totW = totD / 7;
         const totM = totD / (365 / 12);
         const totY = totD / 365;
         const fmt = val => parseFloat(val.toFixed(3));
@@ -983,6 +990,7 @@
         document.getElementById('totS').textContent = fmt(totS);
         document.getElementById('totMin').textContent = fmt(totMin);
         document.getElementById('totH').textContent = fmt(totH);
+        document.getElementById('totW').textContent = fmt(totW);
         document.getElementById('totD').textContent = fmt(totD);
         document.getElementById('totM').textContent = fmt(totM);
         document.getElementById('totY').textContent = fmt(totY);
