@@ -313,6 +313,20 @@
         #ptrIndicator.ptr-loading .ptr-arrow { display: none; }
         #ptrIndicator.ptr-loading .ptr-spinner { display: block; animation: ptr-spin 0.8s linear infinite; }
         @keyframes ptr-spin { to { transform: rotate(360deg); } }
+        /* 下拉刷新的提示条（目前只有断网时用）。正文色/卡片色反过来，深浅色自动跟。
+           width:max-content 必须写：left:50% 的 fixed 元素收缩宽度只能用到半屏，会被挤成好几行 */
+        #ptrTip {
+            position: fixed; left: 50%;
+            bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+            transform: translateX(-50%) translateY(12px);
+            width: max-content; max-width: calc(100vw - 32px);
+            padding: 10px 16px; border-radius: 12px;
+            background: var(--text-main); color: var(--card-bg);
+            font-size: 14px; line-height: 1.5; text-align: center;
+            z-index: 1200; opacity: 0; pointer-events: none;
+            transition: opacity 0.25s ease, transform 0.25s ease;
+        }
+        #ptrTip.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
         /* ================= 公历 ⇄ 农历 ================= */
         .lunar-line {
@@ -371,6 +385,7 @@
     <svg class="ptr-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
     <svg class="ptr-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>
 </div>
+<div id="ptrTip" role="status"></div>
 
 <div class="container">
     <div class="real-time-badge">当前北京时间：<span id="realTimeClock">--</span></div>
@@ -1427,6 +1442,22 @@
         function threshold() { return Math.min(100, Math.max(56, window.innerHeight * 0.1)); }
 
         let startX = 0, startY = 0, pulling = false, locked = false, distance = 0, refreshing = false;
+        let tipTimer = null, unlockTimer = null;
+
+        function showTip(msg) {
+            const tip = document.getElementById('ptrTip');
+            if (!tip) return;
+            tip.textContent = msg;
+            tip.classList.add('show');
+            clearTimeout(tipTimer);
+            tipTimer = setTimeout(function () { tip.classList.remove('show'); }, 3200);
+        }
+        // 刷新没真发生（断网被拦下来 / 重新加载一直没回来）：收回指示器，手势恢复可用
+        function giveUp() {
+            refreshing = false;
+            el.classList.remove('ptr-loading');
+            reset(true);
+        }
 
         // 有浮层时不接管手势：日期选择弹窗、任何展开着的下拉菜单
         function blocked() {
@@ -1487,13 +1518,19 @@
             try { sessionStorage.setItem('ptr-fired', String(Date.now())); } catch (err) {}
             savePageState();   // 刷新不能把已经填好的日期和数字一起冲掉
             // 留一下 spinner，否则直接白屏像卡死
-            setTimeout(function () { location.reload(); }, 260);
-            // 兜底：重新加载被取消或一直卡着时，别让页面永远锁着滑不动
             setTimeout(function () {
-                refreshing = false;
-                el.classList.remove('ptr-loading');
-                reset(true);
-            }, 10000);
+                // 没有 Service Worker：断网时 reload 会变成浏览器的错误页，填好的内容也看不到了
+                if (navigator.onLine === false) {
+                    try { sessionStorage.removeItem(PTR_STATE_KEY); } catch (err) {}
+                    showTip('当前没有网络，先不刷新了。等有网了再拉一次。');
+                    giveUp();
+                    return;
+                }
+                location.reload();
+            }, 260);
+            // 兜底：重新加载被取消或一直卡着时，10 秒后解锁，别让页面永远滑不动
+            clearTimeout(unlockTimer);
+            unlockTimer = setTimeout(function () { if (refreshing) giveUp(); }, 10000);
         }, { passive: true });
 
         // 来电、系统手势等会打断触摸，此时没有 touchend：不收尾的话指示器会停在半空
