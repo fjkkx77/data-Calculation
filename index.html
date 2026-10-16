@@ -5,6 +5,9 @@
     <!-- 禁止双指缩放（用户 2026-10-08 要求：太容易误触）。这行只管得住安卓等浏览器，
          iOS Safari 从 iOS 10 起不理会它，所以下面 CSS 的 touch-action 和 JS 的 gesturestart 再各拦一层 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <title>日期推算与换算</title>
     <style>
         :root {
