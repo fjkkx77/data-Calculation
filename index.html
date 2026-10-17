@@ -8,6 +8,26 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+    <script>
+    /* 状态栏颜色 = 页面最顶上那一条的实际背景色（2026-10-17）。iOS 18 等旧系统存到主屏幕后，状态栏取 theme-color，
+       没写就是一条黑条（iPhone XS 实拍）。站里能切深浅色，所以加载完、切换后都重新量一次；上面两行是脚本跑之前的初始值 */
+    (function(){
+      function pick(){
+        var el=document.elementFromPoint(innerWidth/2,1)||document.body,L=[],c=[255,255,255];
+        for(;el;el=el.parentElement){var m=(getComputedStyle(el).backgroundColor.match(/[\d.]+/g)||[]).map(Number);
+          if(m.length<3)continue;var a=m.length>3?m[3]:1;if(!a)continue;L.push([m[0],m[1],m[2],a]);if(a>=1)break;}
+        for(var i=L.length-1;i>=0;i--){var l=L[i];c=[0,1,2].map(function(k){return l[k]*l[3]+c[k]*(1-l[3])});}
+        return "#"+c.map(function(v){return ("0"+Math.round(v).toString(16)).slice(-2)}).join("");
+      }
+      function set(){requestAnimationFrame(function(){if(!document.body)return;var v=pick();
+        [].forEach.call(document.querySelectorAll('meta[name="theme-color"]'),function(m){m.removeAttribute("media");m.setAttribute("content",v);});});}
+      addEventListener("load",set);
+      if(window.matchMedia)try{matchMedia("(prefers-color-scheme: dark)").addEventListener("change",set);}catch(e){}
+      new MutationObserver(set).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme","class"]});
+    })();
+    </script>
     <title>日期推算与换算</title>
     <style>
         :root {
