@@ -1508,8 +1508,13 @@
             clearTimeout(tipTimer);
             tipTimer = setTimeout(function () { tip.classList.remove('show'); }, 3200);
         }
+        // 第几次下拉：兜底解锁 / 作罢之后，上一次还没回来的检查一律作废。不然锁屏回来时检查被重新计时、跟 10 秒兜底错开，
+        // 转圈先收了、过几秒页面又突然刷新或冒出「网络不好」，甚至作用到下一次下拉上（审查指出）。
+        // （检查那几秒里填的内容不用另外拦：真正重新加载前会再存一次表单，刷新后原样填回去）
+        var attempt = 0;
         // 刷新没真发生（断网被拦下来 / 重新加载一直没回来）：收回指示器，手势恢复可用
         function giveUp() {
+            attempt++;
             refreshing = false;
             reloading = false;
             clearTimeout(unlockTimer);
@@ -1581,8 +1586,12 @@
             el.style.transform = 'translateY(' + threshold() + 'px)';
             try { sessionStorage.setItem('ptr-fired', String(Date.now())); } catch (err) {}
             savePageState();   // 刷新不能把已经填好的日期和数字一起冲掉
+            const my = ++attempt;
+            // 这一次已经作废（兜底到点 / 作罢 / 又拉了一次）就什么都不做
+            const live = function (fn) { return function () { if (my === attempt) fn(); }; };
             // 留一下 spinner，否则直接白屏像卡死
             setTimeout(function () {
+                if (my !== attempt) return;
                 // 没有 Service Worker：断网时 reload 会变成浏览器的错误页，填好的内容也看不到了
                 if (navigator.onLine === false) {
                     try { sessionStorage.removeItem(PTR_STATE_KEY); } catch (err) {}
@@ -1590,7 +1599,7 @@
                     giveUp();
                     return;
                 }
-                safeReload(function () {
+                safeReload(live(function () {
                     // 检查网络那几秒页面是能用的：这期间要是打开了日期弹窗 / 下拉菜单，整页重新加载会把它冲掉——作罢
                     if (blocked()) {
                         try { sessionStorage.removeItem(PTR_STATE_KEY); } catch (err) {}
@@ -1601,11 +1610,11 @@
                     // 兜底从真正开始重新加载算起：检查网络可能已经用掉 6 秒，不重算的话重新加载只剩 3~4 秒就被解锁，iOS 冻住的旧页面又能滑出空白
                     armUnlock();
                     location.reload();
-                }, function () {
+                }), live(function () {
                     try { sessionStorage.removeItem(PTR_STATE_KEY); } catch (err) {}
                     showTip('网络不好，这次没刷新。稍后再拉一次。');
                     giveUp();
-                });
+                }));
             }, 260);
             armUnlock();
         }, { passive: true });
