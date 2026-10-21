@@ -1486,7 +1486,13 @@
                 settled = true; clearTimeout(timer);
                 if (good) go(); else { if (ac) ac.abort(); fail(); }
             }
-            const timer = setTimeout(function () { finish(false); }, 6000);
+            let t0 = Date.now(), timer = null;
+            function fire() {
+                // 晚了 3 秒以上才到点、而且这会儿页面看得见＝检查途中页面在后台被冻过（锁屏 / 切走又回来）：冻住那段不算，重新计时，免得一回来就误报「网络不好」
+                if (Date.now() - t0 > 9000 && !document.hidden) { t0 = Date.now(); timer = setTimeout(fire, 6000); return; }
+                finish(false);
+            }
+            timer = setTimeout(fire, 6000);
             Promise.all(urls.map(function (u, i) {
                 // 正文也要读完才算拿到（响应头先到、正文卡住也是卡住）；页面本身要回 2xx 才刷（回错误页就别跳过去），css/js 只要服务器有回应就算网络通（某个文件本来就 404 的话刷新后也一样缺，不能因此永远说「网络不好」）
                 return fetch(u, { cache: 'no-cache', signal: ac ? ac.signal : undefined })
@@ -1506,8 +1512,14 @@
         function giveUp() {
             refreshing = false;
             reloading = false;
+            clearTimeout(unlockTimer);
             el.classList.remove('ptr-loading');
             reset(true);
+        }
+        // 兜底：重新加载被取消或一直卡着时，10 秒后解锁，别让页面永远滑不动
+        function armUnlock() {
+            clearTimeout(unlockTimer);
+            unlockTimer = setTimeout(function () { if (refreshing) giveUp(); }, 10000);
         }
 
         // 有浮层时不接管手势：日期选择弹窗、任何展开着的下拉菜单
@@ -1579,7 +1591,15 @@
                     return;
                 }
                 safeReload(function () {
+                    // 检查网络那几秒页面是能用的：这期间要是打开了日期弹窗 / 下拉菜单，整页重新加载会把它冲掉——作罢
+                    if (blocked()) {
+                        try { sessionStorage.removeItem(PTR_STATE_KEY); } catch (err) {}
+                        giveUp(); return;
+                    }
+                    savePageState();   // 再存一次：检查网络那几秒里填的内容也要带过去（松手时存的那份是旧的）
                     reloading = true;
+                    // 兜底从真正开始重新加载算起：检查网络可能已经用掉 6 秒，不重算的话重新加载只剩 3~4 秒就被解锁，iOS 冻住的旧页面又能滑出空白
+                    armUnlock();
                     location.reload();
                 }, function () {
                     try { sessionStorage.removeItem(PTR_STATE_KEY); } catch (err) {}
@@ -1587,9 +1607,7 @@
                     giveUp();
                 });
             }, 260);
-            // 兜底：重新加载被取消或一直卡着时，10 秒后解锁，别让页面永远滑不动
-            clearTimeout(unlockTimer);
-            unlockTimer = setTimeout(function () { if (refreshing) giveUp(); }, 10000);
+            armUnlock();
         }, { passive: true });
 
         // 来电、系统手势等会打断触摸，此时没有 touchend：不收尾的话指示器会停在半空
