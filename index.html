@@ -259,6 +259,27 @@
 
         .weekdays, .days { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; gap: 4px; position: relative; z-index: 1; }
         .weekdays span { font-size: 12px; color: var(--text-secondary); font-weight: 500; margin-bottom: 6px; }
+        /* 左右滑切月（2026-10-30 照一日轨道）：上月/本月/下月三块并排成一条轨道，拖到一半能同时看见两个月。
+           每块固定 6 行 42 格，高度恒定——高度一变，拖动时每帧重排会掉帧，翻月时弹窗也会一跳一跳 */
+        /* 可见区往四周借出卡片的内边距（负外边距抵掉、不改排版）：选中圈的阴影不会被切，滑动时日期一直滑到卡片边缘才消失。
+           三个月之间留 32px（＝JS 里 DPC_GAP）：旁边那个月的选中圈贴边时，阴影落在空隙里、不会漏进来一道（1280 宽截图实测过） */
+        .dp-vp { overflow: hidden; touch-action: pan-y pinch-zoom; padding: 8px 16px 16px; margin: -8px -16px -16px; }
+        .dp-trk { display: flex; align-items: flex-start; gap: 32px; transform: translateX(calc(-100% - 32px)); }
+        .dp-trk > .days { flex: 0 0 100%; min-width: 0; }
+        .weekdays { touch-action: pan-y pinch-zoom; }
+        /* 上个月 / 下个月：只给有鼠标 / 触控板的设备（电脑上没法用手指滑）；手机上靠左右滑 */
+        .picker-nav { display: flex; align-items: center; gap: 2px; }
+        .dp-arw { display: none; width: 34px; height: 34px; border: none; border-radius: 8px; background: transparent; color: var(--text-secondary); align-items: center; justify-content: center; cursor: pointer; padding: 0; }
+        .dp-arw svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+        @media (hover: hover) and (pointer: fine) {
+            .dp-arw { display: flex; }
+            .dp-arw:hover { background: rgba(142, 142, 147, 0.12); color: var(--text-main); }
+        }
+        /* 电脑上窗口拖得很窄：箭头收窄，让「年 月 今天 ‹ ›」仍排得进一行（360 宽实测原来折成两行） */
+        @media (hover: hover) and (pointer: fine) and (max-width: 420px) {
+            .dp-arw { width: 26px; }
+            .picker-nav { gap: 0; }
+        }
         /* 外层格子 44px 高管点击（触摸标准），里面的正圆管显示：
            窄屏上格子只有 33px 宽，直接给格子画圆会变成竖椭圆。
            2026-10-14 试过每格下面加农历小字，用户嫌太乱撤掉了；农历只在下方信息行里给 */
@@ -740,11 +761,14 @@
             </div>
             <div class="picker-nav">
                 <button class="btn-today-modal" onclick="jumpToTodayModal()">今天</button>
+                <button class="dp-arw" onclick="dpStep(event, -1)" aria-label="上个月"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+                <button class="dp-arw" onclick="dpStep(event, 1)" aria-label="下个月"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
             </div>
         </div>
         
         <div class="weekdays"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>
-        <div class="days" id="modalDays"></div>
+        <!-- 左右滑切月：上月 / 本月 / 下月三块并排，中间那块的 id 是 modalDays -->
+        <div class="dp-vp" id="dpVp"><div class="dp-trk" id="dpTrk"></div></div>
 
         <div class="picked-info" aria-live="polite">
             <div class="picked-text">
@@ -1720,6 +1744,7 @@
     }
 
     function closeModal() {
+        dpcFinish(); dpc.track = false; dpc.lock = false;
         document.getElementById('datePickerModal').classList.remove('show');
         closeAllDropdowns(new Event('click'));
     }
@@ -1734,29 +1759,47 @@
     }
 
     function selectDay(day) { selectedDay = day; renderCalendar(); }
+    // 拖到一半时旁边那个月也点得到：点哪个月的格子就选哪个月
+    function pickDay(y, m, d) { viewYear = y; viewMonth = m; selectedDay = d; renderCalendar(); }
+    // 往前 / 往后挪 n 个月；日子收敛到那个月的天数内
+    function dpShiftYM(y, m, n) { const d = new Date(Date.UTC(y, m - 1 + n, 1)); return [d.getUTCFullYear(), d.getUTCMonth() + 1]; }
+    function dpClampD(y, m, d) { return Math.min(d, daysInMonthOf(y, m)); }
+    function dpHead(y, m) {
+        document.getElementById('yearDisplay').textContent = y;
+        document.getElementById('monthDisplay').textContent = m;
+    }
+
+    // 画一个月的格子。固定 6 行 42 格：高度恒定，左右滑时才不用每帧重排（代价：5 行的月份底下多一行空白）
+    function buildPane(y, m, selD, actualToday) {
+        let lead = new Date(Date.UTC(y, m - 1, 1)).getUTCDay();
+        lead = lead === 0 ? 6 : lead - 1;                       // 周一开头
+        const total = daysInMonthOf(y, m);
+        const isTodayMonth = (actualToday.year === y && actualToday.month === m);
+        let html = '';
+        for (let i = 0; i < lead; i++) html += `<div class="empty"></div>`;
+        for (let i = 1; i <= total; i++) {
+            const cls = [];
+            if (i === selD) cls.push('selected');
+            if (isTodayMonth && i === actualToday.day) cls.push('today');
+            html += `<div class="${cls.join(' ')}" onclick="pickDay(${y}, ${m}, ${i})"><span>${i}</span></div>`;
+        }
+        for (let i = lead + total; i < 42; i++) html += `<div class="empty"></div>`;
+        return html;
+    }
 
     function renderCalendar() {
-        updateDropdownUI();
-        const firstDayDate = new Date(Date.UTC(viewYear, viewMonth - 1, 1));
-        let startDayOfWeek = firstDayDate.getUTCDay(); 
-        startDayOfWeek = startDayOfWeek === 0 ? 7 : startDayOfWeek; 
-        const daysInMonth = daysInMonthOf(viewYear, viewMonth);
+        dpcStop();     // 调用方（点格子 / 菜单 / 今天 / 翻月落定）都已写好确定的年月：动画直接停，不能再补翻一次
         // 选了 31 号再切到小月：收到当月最后一天，否则会存进「2月31日」这种不存在的日期
-        if (selectedDay > daysInMonth) selectedDay = daysInMonth;
+        selectedDay = dpClampD(viewYear, viewMonth, selectedDay);
+        updateDropdownUI();
         const actualToday = getBeijingTimeObj();
-        const isCurrentMonthYear = (actualToday.year === viewYear && actualToday.month === viewMonth);
-        const daysContainer = document.getElementById('modalDays');
-        let html = '';
-        for (let i = 1; i < startDayOfWeek; i++) html += `<div class="empty"></div>`;
-        for (let i = 1; i <= daysInMonth; i++) {
-            const isSelected = (i === selectedDay);
-            const isActualToday = (isCurrentMonthYear && i === actualToday.day);
-            let classNames = [];
-            if (isSelected) classNames.push('selected');
-            if (isActualToday) classNames.push('today');
-            html += `<div class="${classNames.join(' ')}" onclick="selectDay(${i})"><span>${i}</span></div>`;
-        }
-        daysContainer.innerHTML = html;
+        const trk = document.getElementById('dpTrk');
+        // 上月 / 本月 / 下月。两侧的选中格按「翻过去之后」的样子画，落位那一下才不会变
+        trk.innerHTML = [-1, 0, 1].map(n => {
+            const [y, m] = dpShiftYM(viewYear, viewMonth, n);
+            const inner = buildPane(y, m, dpClampD(y, m, selectedDay), actualToday);
+            return n ? `<div class="days" inert aria-hidden="true">${inner}</div>` : `<div class="days" id="modalDays">${inner}</div>`;
+        }).join('');
         renderPickedInfo();
     }
 
@@ -1775,6 +1818,7 @@
     }
 
     function confirmModal() {
+        dpcFinish();                    // 刚滑到下个月就点完成：先落定，取到的才是看见的那个月
         const read = (id, max) => Math.min(max, Math.max(0, parseInt(document.getElementById(id).value, 10) || 0));
         dates[currentModalTarget] = { year: viewYear, month: viewMonth, day: selectedDay,
                                       hour: read('modalH', 23), minute: read('modalM', 59), second: read('modalS', 59) };
@@ -1786,6 +1830,172 @@
 
         if (currentModalTarget === 'base') calculate();
         else calculateDiff();
+    }
+
+    // ================= 日历左右滑切月 =================
+    // 2026-10-30 照一日轨道（day-rail）搬来，参数一个没改，三个站手感一致。翻页物理照 iOS
+    // （来由见记忆库 feedback_ios_gesture_recipe §4.6「翻页物理」）：
+    // · 翻不翻看「松手位置 + 速度 × 499」的投影（UIScrollView 减速率 0.998）有没有过半，快扫一下也能翻
+    // · 落位用带初速度的弹簧（SwiftUI .snappy：response .4 / damping .86），接住松手速度，过冲封顶 14px
+    // · 弹簧采样成关键帧交给 Web Animations 播；动画半路再按下去就地停住、接着拖
+    // 轨道常态停在 -100%（中间那块）；拖动 / 动画时用像素写，落位后才真正翻月、重画三块。
+    // 只在日期格和星期那一行上起手；屏幕左右边缘 28px 留给浏览器返回
+    const DPC_LOCK2 = 100,      // 动够 10px 才判方向（平方）
+          DPC_ANGLE = 45, DPC_EDGE = 28, DPC_HOLD = 500,
+          DPC_PROJECT = 0.998 / (1 - 0.998),
+          DPC_RESP = 0.4, DPC_DAMP = 0.86, DPC_HZ = 240, DPC_MAX_MS = 620, DPC_OVER = 14,
+          DPC_GAP = 32;           // 三个月之间的空隙，和 CSS .dp-trk 的 gap 一致；翻一页走「一块宽 + 空隙」
+    const dpcRM = window.matchMedia ? matchMedia('(prefers-reduced-motion: reduce)') : null;
+    // 带初速度的弹簧，采样成 0→1 的进度。distance = 起点 − 终点（px），velocity = 松手速度（px/ms）
+    function dpcSpring(distance, velocity) {
+        const w0 = 2 * Math.PI / DPC_RESP, z = DPC_DAMP, wd = w0 * Math.sqrt(1 - z * z), dt = 1 / DPC_HZ;
+        function sample(v0) {
+            const B = (v0 + z * w0) / wd, out = [];
+            for (let i = 0; ; i++) {
+                const t = i * dt;
+                if (t >= DPC_MAX_MS / 1000) break;
+                const u = Math.exp(-z * w0 * t) * (Math.cos(wd * t) + B * Math.sin(wd * t));
+                out.push(1 - u);
+                if (t > 0.1 && Math.abs(u) < 0.002) break;
+            }
+            return out;
+        }
+        const over = a => (Math.max.apply(null, a) - 1) * Math.abs(distance);
+        let v0 = distance ? (velocity * 1000) / distance : 0, pts = sample(v0);
+        if (over(pts) > DPC_OVER) {           // 0 速度一定不过冲：二分找一个刚好不超的初速度
+            let lo = 0, hi = v0;
+            for (let i = 0; i < 8; i++) { const mid = (lo + hi) / 2, c = sample(mid); if (over(c) > DPC_OVER) hi = mid; else { lo = mid; pts = c; } }
+        }
+        pts[pts.length - 1] = 1;              // 最后一点钉死，保证精确落位
+        return { ms: Math.round(Math.max(120, (pts.length - 1) * dt * 1000)), pts };
+    }
+    const dpc = { track: false, lock: false, pos: 0, base: 0, W: 1, x0: 0, y0: 0, t0: 0, lx: 0, lt: 0, v: 0, anim: null, dir: 0, guard: 0, gx: 0, gy: 0 };
+    const dpTrkEl = () => document.getElementById('dpTrk');
+    function dpcSet(x) { dpc.pos = x; dpTrkEl().style.transform = x ? 'translate3d(' + (x - dpc.W) + 'px,0,0)' : ''; }
+    function dpcLiveX() {
+        if (!dpc.anim) return dpc.pos;
+        const t = getComputedStyle(dpTrkEl()).transform;
+        return (t && t !== 'none' ? new DOMMatrixReadOnly(t).m41 : -dpc.W) + dpc.W;
+    }
+    function dpcCanAnimate() { return !(dpcRM && dpcRM.matches) && !!dpTrkEl().animate; }
+    function dpcRun(from, to, v, done) {
+        const sp = dpcSpring(from - to, v), W = dpc.W, trk = dpTrkEl();
+        dpcSet(to);
+        // 每段普通 linear 的关键帧：带点的 CSS linear() 会让 Safari 把动画踢回主线程
+        const a = trk.animate(sp.pts.map((p, i) => ({
+            offset: i / (sp.pts.length - 1), transform: 'translate3d(' + (from + (to - from) * p - W) + 'px,0,0)'
+        })), { duration: sp.ms, easing: 'linear', fill: 'both' });
+        trk.style.willChange = 'transform';
+        dpc.anim = a;
+        a.onfinish = () => { if (dpc.anim !== a) return; dpc.anim = null; a.cancel(); trk.style.willChange = ''; done(); };
+    }
+    // 逻辑上翻 dir 个月、重画三块（画面位置由调用方再摆）
+    function dpcCommit(dir) {
+        [viewYear, viewMonth] = dpShiftYM(viewYear, viewMonth, dir);
+        dpc.dir = 0; dpc.pos = 0; dpTrkEl().style.transform = '';
+        renderCalendar();
+    }
+    // 翻过去：年月标题马上换，轨道带着速度滑过去，落位后再真正重画
+    function dpcGo(dir, v) {
+        const [y, m] = dpShiftYM(viewYear, viewMonth, dir);
+        dpc.dir = dir; dpHead(y, m);
+        dpcRun(dpc.pos, -dir * dpc.W, v, () => dpcCommit(dir));
+    }
+    function dpcSettle(v) {
+        if (!dpc.pos) return;
+        if (!dpcCanAnimate()) { dpcSet(0); return; }
+        dpcRun(dpc.pos, 0, v, () => { dpc.pos = 0; dpTrkEl().style.transform = ''; });
+    }
+    function dpcStop() {
+        if (dpc.anim) { dpc.anim.cancel(); dpc.anim = null; }
+        const trk = dpTrkEl();
+        dpc.dir = 0; dpc.pos = 0; trk.style.transform = ''; trk.style.willChange = '';
+    }
+    // 立刻收尾、并把正在翻的那个月落定（按「完成」、关掉日历前用）
+    function dpcFinish() {
+        if (!dpc.anim && !dpc.pos) return;
+        const c = dpc.dir, a = dpc.anim, trk = dpTrkEl(); dpc.anim = null; dpc.dir = 0;
+        if (a) a.cancel();
+        trk.style.willChange = ''; dpc.pos = 0; trk.style.transform = '';
+        if (c) { [viewYear, viewMonth] = dpShiftYM(viewYear, viewMonth, c); selectedDay = dpClampD(viewYear, viewMonth, selectedDay); }
+    }
+    // 动画半路按住：停在原处；要去的那个月已经露出来了，就逻辑上先翻过去、画面不动
+    function dpcCatch() {
+        if (!dpc.anim) return;
+        const x = dpcLiveX(), c = dpc.dir, a = dpc.anim;
+        dpc.anim = null; dpc.dir = 0; a.cancel();
+        dpcSet(x);
+        if (c && c * x < 0) { const p = x + c * dpc.W; dpcCommit(c); dpcSet(p); dpTrkEl().style.willChange = 'transform'; }
+        else if (c) dpHead(viewYear, viewMonth);       // 没翻：松手时先换掉的标题换回来
+    }
+    function dpcAbandon() { dpc.track = false; dpc.lock = false; dpcSettle(0); }
+    // ‹ ›（电脑上才显示）：跟手指滑过去走同一条滑动动画；上一下还在滑就先落到位再接着翻，连点不丢
+    function dpStep(event, dir) {
+        event.stopPropagation(); closeAllDropdowns(event);
+        if (dpc.track) return;
+        if (dpc.anim) { dpcFinish(); renderCalendar(); }
+        if (!dpcCanAnimate()) { dpcCommit(dir); return; }
+        dpc.W = dpTrkEl().offsetWidth + DPC_GAP;
+        dpcGo(dir, 0);
+    }
+    function setupMonthSwipe() {
+        const card = document.querySelector('#datePickerModal .ios-picker');
+        card.addEventListener('touchstart', ev => {
+            if (dpc.track) { if (dpc.lock) dpcAbandon(); else dpc.track = false; return; }
+            if (ev.touches.length !== 1 || document.querySelector('.select-menu.show')) return;   // 下拉菜单开着：那是在滚菜单
+            if (!ev.target.closest('.dp-vp, .weekdays')) return;
+            const t = ev.touches[0];
+            if (t.clientX < DPC_EDGE || t.clientX > document.documentElement.clientWidth - DPC_EDGE) return;
+            dpc.W = dpTrkEl().offsetWidth + DPC_GAP;
+            dpcCatch();
+            dpc.base = dpc.pos;
+            dpc.x0 = dpc.lx = t.clientX; dpc.y0 = t.clientY;
+            dpc.t0 = dpc.lt = ev.timeStamp || Date.now(); dpc.v = 0;
+            dpc.track = true; dpc.lock = false;
+        }, { passive: true });
+        card.addEventListener('touchmove', ev => {
+            if (!dpc.track) return;
+            if (ev.touches.length !== 1) { dpcAbandon(); return; }
+            const t = ev.touches[0], mx = t.clientX - dpc.x0, my = t.clientY - dpc.y0;
+            if (!dpc.lock) {
+                // 死区里就要拦：iOS 一旦开始自己滚，后面的 touchmove 就拦不住了
+                if (mx * mx + my * my < DPC_LOCK2) { if (Math.abs(mx) > Math.abs(my) && ev.cancelable) ev.preventDefault(); return; }
+                const now0 = ev.timeStamp || Date.now();
+                if (Math.atan2(Math.abs(my), Math.abs(mx)) * 180 / Math.PI > DPC_ANGLE || now0 - dpc.t0 > DPC_HOLD) { dpcAbandon(); return; }
+                dpc.lock = true; dpTrkEl().style.willChange = 'transform';
+            }
+            if (ev.cancelable) ev.preventDefault();
+            const now = ev.timeStamp || Date.now(), dt = now - dpc.lt;
+            if (dt > 0) { dpc.v = dpc.v * 0.4 + ((t.clientX - dpc.lx) / dt) * 0.6; dpc.lx = t.clientX; dpc.lt = now; }
+            let p = dpc.base + mx;
+            if (p <= -dpc.W) { dpcCommit(1); dpc.base += dpc.W; p += dpc.W; }        // 拖过一整个月：逻辑上先翻，画面接着跟手
+            else if (p >= dpc.W) { dpcCommit(-1); dpc.base -= dpc.W; p -= dpc.W; }
+            dpcSet(p);                                                  // 同步写，不排队到下一帧
+        }, { passive: false });
+        function end(ev) {
+            if (!dpc.track) return;
+            dpc.track = false;
+            if (!dpc.lock) { dpcSettle(0); return; }                    // 半路按住后只是点了一下：回到最近那一格
+            dpc.lock = false;
+            const ct = ev && ev.changedTouches && ev.changedTouches[0];
+            dpc.guard = Date.now() + 350; dpc.gx = ct ? ct.clientX : dpc.lx; dpc.gy = ct ? ct.clientY : dpc.y0;
+            const now = (ev && ev.timeStamp) || Date.now();
+            if (now - dpc.lt > 100) dpc.v = 0;                          // 停住再松手不算甩
+            if (ev && ev.type === 'touchcancel') { dpcSettle(0); return; }
+            const proj = dpc.pos + dpc.v * DPC_PROJECT;
+            if (Math.abs(proj) > dpc.W / 2) {
+                if (dpcCanAnimate()) dpcGo(proj < 0 ? 1 : -1, dpc.v);
+                else { dpcSet(0); dpcCommit(proj < 0 ? 1 : -1); }
+            } else dpcSettle(dpc.v);
+        }
+        card.addEventListener('touchend', end, { passive: true });
+        card.addEventListener('touchcancel', end, { passive: true });
+        // 滑完在松手点补发的 click 别被当成「选了这一天」：只吞松手点附近那一次，350ms 自己过期
+        card.addEventListener('click', ev => {
+            if (Date.now() >= dpc.guard) return;
+            if (Math.abs(ev.clientX - dpc.gx) > 24 || Math.abs(ev.clientY - dpc.gy) > 24) return;
+            dpc.guard = 0; ev.stopPropagation(); ev.preventDefault();
+        }, true);
     }
 
     function initKeyboardFix() {
@@ -1904,6 +2114,7 @@
         setupSectionNav();
         initKeyboardFix();
         setupModalBehavior();
+        setupMonthSwipe();
         setupPullToRefresh();
         document.addEventListener('click', closeLunarMenus);
     };
