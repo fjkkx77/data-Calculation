@@ -1759,7 +1759,7 @@
     }
 
     function selectDay(day) { selectedDay = day; renderCalendar(); }
-    // 拖到一半时旁边那个月也点得到：点哪个月的格子就选哪个月
+    // 格子带上自己的年月：两侧那两块是 inert 的点不到，但翻页落定前后同一个格子可能属于不同的块，按格子自己的年月选最稳
     function pickDay(y, m, d) { viewYear = y; viewMonth = m; selectedDay = d; renderCalendar(); }
     // 往前 / 往后挪 n 个月；日子收敛到那个月的天数内
     function dpShiftYM(y, m, n) { const d = new Date(Date.UTC(y, m - 1 + n, 1)); return [d.getUTCFullYear(), d.getUTCMonth() + 1]; }
