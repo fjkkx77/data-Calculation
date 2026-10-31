@@ -1666,6 +1666,8 @@
 
     function toggleDropdown(event, menuId) {
         event.stopPropagation();
+        // 翻页动画还在跑：先落定，不然选的年 / 月会套在旧月份上（10-30 代码审查）
+        if ((menuId === 'yearMenu' || menuId === 'monthMenu') && (dpc.anim || dpc.pos)) { dpcFinish(); renderCalendar(); }
         const menu = document.getElementById(menuId);
         const isShowing = menu.classList.contains('show');
         closeAllDropdowns(event);
@@ -1758,7 +1760,6 @@
         renderCalendar();
     }
 
-    function selectDay(day) { selectedDay = day; renderCalendar(); }
     // 格子带上自己的年月：两侧那两块是 inert 的点不到，但翻页落定前后同一个格子可能属于不同的块，按格子自己的年月选最稳
     function pickDay(y, m, d) { viewYear = y; viewMonth = m; selectedDay = d; renderCalendar(); }
     // 往前 / 往后挪 n 个月；日子收敛到那个月的天数内
@@ -1787,25 +1788,45 @@
         return html;
     }
 
-    function renderCalendar() {
+    // rot = ±1：滑动翻页落定时用。只拿掉远端那块、补一块新的，中间和手指按着的那块原样留着。
+    // 整块重画（innerHTML）会把手指下的格子移出页面，之后的 touchmove / touchend 发到它身上、不再冒泡到弹窗，
+    // 日历就卡在两个月中间（10-30 代码审查指出，探针实测 isConnected=false）
+    function renderCalendar(rot) {
         dpcStop();     // 调用方（点格子 / 菜单 / 今天 / 翻月落定）都已写好确定的年月：动画直接停，不能再补翻一次
         // 选了 31 号再切到小月：收到当月最后一天，否则会存进「2月31日」这种不存在的日期
         selectedDay = dpClampD(viewYear, viewMonth, selectedDay);
         updateDropdownUI();
         const actualToday = getBeijingTimeObj();
         const trk = document.getElementById('dpTrk');
-        // 上月 / 本月 / 下月。两侧的选中格按「翻过去之后」的样子画，落位那一下才不会变
-        trk.innerHTML = [-1, 0, 1].map(n => {
-            const [y, m] = dpShiftYM(viewYear, viewMonth, n);
-            const inner = buildPane(y, m, dpClampD(y, m, selectedDay), actualToday);
-            return n ? `<div class="days" inert aria-hidden="true">${inner}</div>` : `<div class="days" id="modalDays">${inner}</div>`;
-        }).join('');
+        const mk = (y, m) => {
+            const g = document.createElement('div');
+            g.className = 'days'; g.__y = y; g.__m = m;
+            g.innerHTML = buildPane(y, m, dpClampD(y, m, selectedDay), actualToday);
+            return g;
+        };
+        const k = trk.children;
+        if (rot && k.length === 3) {
+            const [y, m] = dpShiftYM(viewYear, viewMonth, rot);
+            if (rot > 0) { trk.removeChild(k[0]); trk.appendChild(mk(y, m)); }
+            else { trk.removeChild(k[2]); trk.insertBefore(mk(y, m), trk.firstChild); }
+        } else {
+            // 上月 / 本月 / 下月。两侧的选中格按「翻过去之后」的样子画，落位那一下才不会变
+            trk.innerHTML = '';
+            [-1, 0, 1].forEach(n => { const [y, m] = dpShiftYM(viewYear, viewMonth, n); trk.appendChild(mk(y, m)); });
+        }
+        [...trk.children].forEach((g, i) => {
+            g.inert = i !== 1;
+            if (i === 1) { g.id = 'modalDays'; g.removeAttribute('aria-hidden'); }
+            else { g.removeAttribute('id'); g.setAttribute('aria-hidden', 'true'); }
+            const d = dpClampD(g.__y, g.__m, selectedDay);     // 按当前选中重标（那个月没那么多天就收到最后一天）
+            [...g.children].forEach(c => { if (!c.classList.contains('empty')) c.classList.toggle('selected', +c.textContent === d); });
+        });
         renderPickedInfo();
     }
 
     // 日历下方那一行：选中日期的星期 / 农历 / 距今。点日子、翻月、点「今天」、打开弹窗都经过 renderCalendar，所以只在这一处更新
-    function renderPickedInfo() {
-        const y = viewYear, m = viewMonth, d = selectedDay;
+    // 不传＝当前选中；翻页动画开始时传「将要翻到的那一天」，详情条跟顶上的年月一起换
+    function renderPickedInfo(y = viewYear, m = viewMonth, d = selectedDay) {
         document.getElementById('pickedMain').textContent = m + '月' + d + '日 星期' + solarWeekdayCn(y, m, d);
         const l = lunarOfSolar(y, m, d);
         let sub;
@@ -1893,12 +1914,12 @@
     function dpcCommit(dir) {
         [viewYear, viewMonth] = dpShiftYM(viewYear, viewMonth, dir);
         dpc.dir = 0; dpc.pos = 0; dpTrkEl().style.transform = '';
-        renderCalendar();
+        renderCalendar(dir);
     }
     // 翻过去：年月标题马上换，轨道带着速度滑过去，落位后再真正重画
     function dpcGo(dir, v) {
         const [y, m] = dpShiftYM(viewYear, viewMonth, dir);
-        dpc.dir = dir; dpHead(y, m);
+        dpc.dir = dir; dpHead(y, m); renderPickedInfo(y, m, dpClampD(y, m, selectedDay));
         dpcRun(dpc.pos, -dir * dpc.W, v, () => dpcCommit(dir));
     }
     function dpcSettle(v) {
@@ -1914,9 +1935,8 @@
     // 立刻收尾、并把正在翻的那个月落定（按「完成」、关掉日历前用）
     function dpcFinish() {
         if (!dpc.anim && !dpc.pos) return;
-        const c = dpc.dir, a = dpc.anim, trk = dpTrkEl(); dpc.anim = null; dpc.dir = 0;
-        if (a) a.cancel();
-        trk.style.willChange = ''; dpc.pos = 0; trk.style.transform = '';
+        const c = dpc.dir;
+        dpcStop();
         if (c) { [viewYear, viewMonth] = dpShiftYM(viewYear, viewMonth, c); selectedDay = dpClampD(viewYear, viewMonth, selectedDay); }
     }
     // 动画半路按住：停在原处；要去的那个月已经露出来了，就逻辑上先翻过去、画面不动
@@ -1926,7 +1946,12 @@
         dpc.anim = null; dpc.dir = 0; a.cancel();
         dpcSet(x);
         if (c && c * x < 0) { const p = x + c * dpc.W; dpcCommit(c); dpcSet(p); dpTrkEl().style.willChange = 'transform'; }
-        else if (c) dpHead(viewYear, viewMonth);       // 没翻：松手时先换掉的标题换回来
+        else if (c) { dpHead(viewYear, viewMonth); renderPickedInfo(); }   // 没翻：松手时先换掉的标题、详情换回来
+    }
+    // 往 dir 翻一个月还在年份菜单的范围里吗
+    function dpcCanGo(dir) {
+        const y = dpShiftYM(viewYear, viewMonth, dir)[0], items = document.querySelectorAll('#yearMenu .select-item');
+        return !items.length || (y >= +items[0].id.slice(2) && y <= +items[items.length - 1].id.slice(2));
     }
     function dpcAbandon() { dpc.track = false; dpc.lock = false; dpcSettle(0); }
     // ‹ ›（电脑上才显示）：跟手指滑过去走同一条滑动动画；上一下还在滑就先落到位再接着翻，连点不丢
@@ -1934,6 +1959,7 @@
         event.stopPropagation(); closeAllDropdowns(event);
         if (dpc.track) return;
         if (dpc.anim) { dpcFinish(); renderCalendar(); }
+        if (!dpcCanGo(dir)) return;
         if (!dpcCanAnimate()) { dpcCommit(dir); return; }
         dpc.W = dpTrkEl().offsetWidth + DPC_GAP;
         dpcGo(dir, 0);
@@ -1941,7 +1967,7 @@
     function setupMonthSwipe() {
         const card = document.querySelector('#datePickerModal .ios-picker');
         card.addEventListener('touchstart', ev => {
-            if (dpc.track) { if (dpc.lock) dpcAbandon(); else dpc.track = false; return; }
+            if (dpc.track) { dpcAbandon(); return; }        // 第二根手指，或上一次丢了 touchend：先归位，别停在半路
             if (ev.touches.length !== 1 || document.querySelector('.select-menu.show')) return;   // 下拉菜单开着：那是在滚菜单
             if (!ev.target.closest('.dp-vp, .weekdays')) return;
             const t = ev.touches[0];
@@ -1968,6 +1994,8 @@
             const now = ev.timeStamp || Date.now(), dt = now - dpc.lt;
             if (dt > 0) { dpc.v = dpc.v * 0.4 + ((t.clientX - dpc.lx) / dt) * 0.6; dpc.lx = t.clientX; dpc.lt = now; }
             let p = dpc.base + mx;
+            if (p < 0 && !dpcCanGo(1)) p = Math.max(p, -dpc.W / 3);   // 到年份范围的头了：只能拉开一点
+            if (p > 0 && !dpcCanGo(-1)) p = Math.min(p, dpc.W / 3);
             if (p <= -dpc.W) { dpcCommit(1); dpc.base += dpc.W; p += dpc.W; }        // 拖过一整个月：逻辑上先翻，画面接着跟手
             else if (p >= dpc.W) { dpcCommit(-1); dpc.base -= dpc.W; p -= dpc.W; }
             dpcSet(p);                                                  // 同步写，不排队到下一帧
@@ -1975,7 +2003,11 @@
         function end(ev) {
             if (!dpc.track) return;
             dpc.track = false;
-            if (!dpc.lock) { dpcSettle(0); return; }                    // 半路按住后只是点了一下：回到最近那一格
+            if (!dpc.lock) {                                           // 半路按住后只是点了一下：回到近的那一个月
+                if (Math.abs(dpc.pos) > dpc.W / 2 && dpcCanAnimate() && dpcCanGo(dpc.pos > 0 ? -1 : 1)) dpcGo(dpc.pos > 0 ? -1 : 1, 0);
+                else dpcSettle(0);
+                return;
+            }
             dpc.lock = false;
             const ct = ev && ev.changedTouches && ev.changedTouches[0];
             dpc.guard = Date.now() + 350; dpc.gx = ct ? ct.clientX : dpc.lx; dpc.gy = ct ? ct.clientY : dpc.y0;
@@ -1983,7 +2015,7 @@
             if (now - dpc.lt > 100) dpc.v = 0;                          // 停住再松手不算甩
             if (ev && ev.type === 'touchcancel') { dpcSettle(0); return; }
             const proj = dpc.pos + dpc.v * DPC_PROJECT;
-            if (Math.abs(proj) > dpc.W / 2) {
+            if (Math.abs(proj) > dpc.W / 2 && dpcCanGo(proj < 0 ? 1 : -1)) {
                 if (dpcCanAnimate()) dpcGo(proj < 0 ? 1 : -1, dpc.v);
                 else { dpcSet(0); dpcCommit(proj < 0 ? 1 : -1); }
             } else dpcSettle(dpc.v);
