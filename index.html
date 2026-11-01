@@ -41,6 +41,8 @@
             --result-bg: rgba(var(--accent-rgb), 0.10);
             --result-tile: var(--card-bg);
             --hairline: rgba(60, 60, 67, 0.18);
+            --bubble-bg: rgba(255, 255, 255, 0.78);
+            --bubble-edge: rgba(255, 255, 255, 0.7);
             --accent-color: #007AFF;
             --segment-bg: #E3E3E8;
             --input-bg: #F2F2F7;
@@ -68,6 +70,8 @@
                 --text-secondary: #EBEBF599;
                 --result-tile: #3A3A3C;
                 --hairline: rgba(235, 235, 245, 0.18);
+                --bubble-bg: rgba(58, 58, 60, 0.78);
+                --bubble-edge: rgba(255, 255, 255, 0.16);
                 --accent-color: #0A84FF;
                 --segment-bg: #2C2C2E;
                 --input-bg: #2C2C2E;
@@ -135,9 +139,10 @@
 
         .input-label { font-size: 13px; color: var(--text-secondary); font-weight: 600; margin-bottom: 8px; display: block; }
         
-        .custom-datetime-trigger { width: 100%; padding: 16px; font-size: 18px; font-weight: 600; border-radius: 14px; background-color: var(--input-bg); color: var(--text-main); margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: opacity 0.2s; }
+        .custom-datetime-trigger { container-type: inline-size; width: 100%; padding: 16px; font-size: 18px; font-weight: 600; border-radius: 14px; background-color: var(--input-bg); color: var(--text-main); margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: opacity 0.2s; }
         .custom-datetime-trigger:active { opacity: 0.7; }
-        .custom-datetime-trigger .dt-text { min-width: 0; }
+        /* 同结果卡片：日期时间始终一行。可用宽度 = 框宽减图标和间距（28px），一行约 13.3 字宽 */
+        .custom-datetime-trigger .dt-text { min-width: 0; white-space: nowrap; font-size: min(18px, calc((100cqi - 28px) / 13.3)); font-variant-numeric: tabular-nums; }
         .custom-datetime-trigger .dt-sub { display: block; margin-top: 4px; font-size: 13px; font-weight: 500; color: var(--text-secondary); }
         .placeholder { color: var(--text-secondary); font-weight: 400; }
 
@@ -170,7 +175,7 @@
         .sleep-total span { white-space: nowrap; }   /* 窄屏要折行时只在「=」前折，不把「30 分钟」拆开 */
         
         .stepper-control { display: flex; align-items: center; background-color: var(--input-bg); border-radius: 12px; width: 100%; height: 44px; overflow: hidden; transition: box-shadow 0.2s; }
-        .stepper-control:focus-within { box-shadow: 0 0 0 2px var(--accent-color); }
+        .stepper-control:has(input:focus) { box-shadow: 0 0 0 2px var(--accent-color); }   /* 只在输入数字时亮框，点 − / + 不亮 */
         
         input[type="number"]::-webkit-outer-spin-button,
         input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none !important; margin: 0 !important; }
@@ -182,17 +187,36 @@
         .stepper-btn { flex: 0 0 clamp(28px, 32%, 40px); height: 100%; display: flex; touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; justify-content: center; align-items: center; font-size: 18px; font-weight: 600; color: var(--accent-color); background: transparent; border: none; cursor: pointer; transition: background-color 0.15s; padding: 0; }
         .stepper-btn:active { background-color: var(--stepper-btn-active); }
 
+        /* 按住 − / + 时显示被手指挡住的数字。不透明度比系统玻璃高，读数优先；
+           网页做不出系统级折射，这里是磨砂 + 内高光。位置由 placeStepperBubble 按手指和屏幕边算 */
+        .stepper-bubble { position: fixed; left: 0; top: 0; z-index: 95; display: flex; align-items: baseline; gap: 4px;
+                          min-width: 72px; justify-content: center; padding: 8px 18px; border-radius: 22px;
+                          background: var(--bubble-bg); color: var(--text-main); white-space: nowrap; pointer-events: none;
+                          -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%);
+                          box-shadow: inset 0 1px 0 var(--bubble-edge), inset 0 0 0 0.5px var(--bubble-edge), 0 8px 24px rgba(0, 0, 0, 0.18);
+                          opacity: 0; transform: scale(0.88); transition: opacity 0.16s ease, transform 0.24s cubic-bezier(0.2, 1.2, 0.35, 1); }
+        .stepper-bubble.show { opacity: 1; transform: scale(1); }
+        .stepper-bubble b { font-size: 28px; line-height: 34px; font-weight: 700; font-variant-numeric: tabular-nums; }
+        .stepper-bubble span { font-size: 15px; font-weight: 600; }
+        @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+            .stepper-bubble { background: var(--card-bg); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .stepper-bubble, .stepper-bubble.show { transform: none; transition: opacity 0.16s ease; }
+        }
+
         .convert-control { display: flex; align-items: center; background-color: var(--input-bg); border-radius: 12px; width: 100%; height: 44px; overflow: hidden; transition: box-shadow 0.2s; }
         .convert-control:focus-within { box-shadow: 0 0 0 2px var(--accent-color); }
         .convert-control input { flex: 1; width: 100%; min-width: 0; text-align: center; font-size: 18px; font-weight: 700; border: none; background: transparent; color: var(--text-main); outline: none; padding: 0 8px; font-variant-numeric: tabular-nums; }
 
         /* 结果区：纯色底 + 正文色，靠字号字重分层，不靠渐变和阴影（HIG buttons：醒目靠填充色；typography：用字号字重表达层级） */
-        .result-card { padding: 16px; background-color: var(--result-bg); color: var(--text-main); border-radius: 16px; }
+        .result-card { padding: 16px; background-color: var(--result-bg); color: var(--text-main); border-radius: 16px; container-type: inline-size; }
         .result-label { font-size: 13px; font-weight: 500; line-height: 18px; color: var(--text-secondary); margin-bottom: 6px; }
-        /* 日期在左、时间在右；一行放不下时时间自己掉到下一行，不按宽度写断点 */
-        .result-value { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 2px 16px;
-                        font-size: 22px; font-weight: 700; line-height: 28px; }
-        .result-value.is-text { display: block; }
+        /* 日期在左、时间在右，始终一行：字号按结果框宽度推导。一行实测约 13.3 个字宽（iPhone 截图量得），
+           除以 13.9 留约 4% 余量。数字必须等宽，否则 2082 放得下、2083 放不下，结果会来回换行 */
+        .result-value { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 2px 0.6em;
+                        font-size: min(22px, 7.2cqi); font-weight: 700; line-height: 28px; font-variant-numeric: tabular-nums; }
+        .result-value.is-text { display: block; font-size: 22px; }
         .result-label:empty { display: none; }
         .rv-date, .rv-time { white-space: nowrap; }
         .rv-chunk { display: inline-block; }
@@ -445,6 +469,7 @@
     <svg class="ptr-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>
 </div>
 <div id="ptrTip" role="status"></div>
+<div class="stepper-bubble" id="stepperBubble" aria-hidden="true"><b></b><span></span></div>
 
 <div class="container">
     <div class="real-time-badge">当前北京时间：<span id="realTimeClock">--</span></div>
@@ -1050,22 +1075,51 @@
 
     // 按住 − / + 连续变化，同 UIStepper.autorepeat（官方默认开）。
     // 500ms 起步、每 100ms 一次、连按 2 秒后每 40ms 一次：Apple 没公开这些数，是我定的，待真机调
+    const STEPPER_UNITS = { valY: '年', valM: '个月', valD: '天', valh: '小时', valm: '分钟', vals: '秒', valW: '周', valSleep: '周期' };
+
+    // 气泡放在手指上方；上面放不下就放到手指旁边空间大的一侧。
+    // FINGER_R 是手指盖住的半径，取 HIG 44pt 点按尺寸的约 1.3 倍，是我定的，待真机调
+    function placeStepperBubble(bubble, x, y) {
+        const FINGER_R = 28, EDGE = 8;
+        const w = bubble.offsetWidth, h = bubble.offsetHeight;
+        const vw = document.documentElement.clientWidth;
+        let left = x - w / 2, top = y - FINGER_R - EDGE - h;
+        if (top < EDGE) {
+            top = Math.max(EDGE, y - h / 2);
+            left = x > vw / 2 ? x - FINGER_R - EDGE - w : x + FINGER_R + EDGE;
+        }
+        bubble.style.left = Math.max(EDGE, Math.min(vw - EDGE - w, left)) + 'px';
+        bubble.style.top = top + 'px';
+    }
+
     function setupStepperRepeat() {
-        let holdTimer = 0, repeating = false;
-        const stop = () => { clearTimeout(holdTimer); holdTimer = 0; };
+        const bubble = document.getElementById('stepperBubble');
+        let holdTimer = 0, hideTimer = 0, repeating = false;
+        const stop = () => {
+            clearTimeout(holdTimer); holdTimer = 0;
+            if (bubble.classList.contains('show')) {   // 多留一下，让人看清最后的数字
+                clearTimeout(hideTimer);
+                hideTimer = setTimeout(() => bubble.classList.remove('show'), 300);
+            }
+        };
         document.addEventListener('pointerdown', (e) => {
             const btn = e.target.closest && e.target.closest('.stepper-btn');
             repeating = false;
             if (!btn || e.button !== 0) return;
             const m = /stepValue\('(\w+)',\s*(-?1)\)/.exec(btn.getAttribute('onclick') || '');
             if (!m) return;
-            const startedAt = performance.now();
+            const startedAt = performance.now(), x = e.clientX, y = e.clientY;
             const tick = () => {
                 repeating = true;
                 stepValue(m[1], Number(m[2]));
+                clearTimeout(hideTimer);
+                bubble.firstChild.textContent = getVal(m[1]);
+                bubble.lastChild.textContent = STEPPER_UNITS[m[1]];
+                placeStepperBubble(bubble, x, y);
+                bubble.classList.add('show');
                 holdTimer = setTimeout(tick, performance.now() - startedAt > 2500 ? 40 : 100);
             };
-            stop();
+            clearTimeout(holdTimer);
             holdTimer = setTimeout(tick, 500);
         });
         ['pointerup', 'pointercancel', 'blur'].forEach(t => window.addEventListener(t, stop));
