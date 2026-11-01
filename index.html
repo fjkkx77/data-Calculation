@@ -48,7 +48,7 @@
             --input-bg: #F2F2F7;
             --shadow-color: rgba(0, 0, 0, 0.06);
             --modal-overlay: rgba(0, 0, 0, 0.4);
-            --modal-bg: rgba(255, 255, 255, 0.85);
+            --modal-bg: var(--card-bg);   /* 不透明：日历和时间都是要读的数字，也避免吸底按钮区露出接缝 */
             --danger-color: #FF3B30;
             --danger-bg: rgba(255, 59, 48, 0.1);
             --dropdown-bg: rgba(255, 255, 255, 0.95);
@@ -77,7 +77,7 @@
                 --input-bg: #2C2C2E;
                 --shadow-color: rgba(0, 0, 0, 0.3);
                 --modal-overlay: rgba(0, 0, 0, 0.6);
-                --modal-bg: rgba(30, 30, 30, 0.85);
+                --modal-bg: var(--card-bg);
                 --dropdown-bg: rgba(40, 40, 40, 0.95);
                 --dropdown-border: rgba(255, 255, 255, 0.1);
                 --stepper-btn-active: rgba(255, 255, 255, 0.15);
@@ -270,7 +270,7 @@
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; background-color: var(--modal-overlay); display: flex; justify-content: center; align-items: center; z-index: 999; opacity: 0; pointer-events: none; transition: opacity 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
         .modal-overlay.show { opacity: 1; pointer-events: auto; }
 
-        .ios-picker { width: 90%; max-width: 360px; max-height: 94dvh; overflow-y: auto; overscroll-behavior: none; background: var(--modal-bg); backdrop-filter: blur(25px) saturate(180%); -webkit-backdrop-filter: blur(25px) saturate(180%); border-radius: 24px; padding: 16px 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); transform: scale(0.95); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); border: 1px solid var(--dropdown-border); scrollbar-width: none; }
+        .ios-picker { width: 90%; max-width: 360px; max-height: 94dvh; overflow-y: auto; overscroll-behavior: none; background: var(--modal-bg); border-radius: 24px; padding: 16px 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); transform: scale(0.95); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); border: 1px solid var(--dropdown-border); scrollbar-width: none; }
         .ios-picker::-webkit-scrollbar { display: none; }
         .modal-overlay.show .ios-picker { transform: scale(1); }
 
@@ -278,8 +278,9 @@
         .dropdown-group { display: flex; gap: 6px; align-items: center; }
         
         .custom-select { position: relative; }
-        .select-btn { background: rgba(142, 142, 147, 0.12); padding: 4px 8px; border-radius: 8px; font-size: 17px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 4px; cursor: pointer; transition: background 0.2s; }
+        .select-btn { position: relative; background: rgba(142, 142, 147, 0.12); padding: 6px 10px; border-radius: 10px; font-size: 17px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 4px; cursor: pointer; transition: background 0.2s; }
         .select-btn:active { background: rgba(142, 142, 147, 0.25); }
+        .picker-header .select-btn::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 44px; transform: translateY(-50%); }
         .select-btn::after { content: "▾"; font-size: 14px; color: var(--text-secondary); }
 
         .select-menu { position: absolute; top: calc(100% + 8px); left: 0; background: var(--dropdown-bg); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); border: 1px solid var(--dropdown-border); border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); max-height: 200px; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; min-width: 100px; z-index: 100; opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.95); transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1); scrollbar-width: thin; scrollbar-color: var(--scrollbar-thumb) transparent; }
@@ -293,8 +294,9 @@
         .select-item:active { background: var(--segment-bg); }
         .select-item.selected { color: var(--accent-color); font-weight: 700; background: rgba(0, 122, 255, 0.08); }
 
-        .btn-today-modal { background-color: rgba(0, 122, 255, 0.1); color: var(--accent-color); border: none; padding: 6px 12px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background-color 0.2s; }
-        .btn-today-modal:active { background-color: rgba(0, 122, 255, 0.2); }
+        .btn-today-modal { position: relative; background-color: rgba(var(--accent-rgb), 0.1); color: var(--accent-color); border: none; height: 34px; padding: 0 14px; border-radius: 17px; font-size: 15px; font-weight: 600; cursor: pointer; transition: background-color 0.2s; }
+        .btn-today-modal:active { background-color: rgba(var(--accent-rgb), 0.2); }
+        .btn-today-modal::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 44px; transform: translateY(-50%); }
 
         .weekdays, .days { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; gap: 4px; position: relative; z-index: 1; }
         .weekdays span { font-size: 12px; color: var(--text-secondary); font-weight: 500; margin-bottom: 6px; }
@@ -337,13 +339,13 @@
         /* 只是状态文字，不加底色：加了就跟顶部「今天」按钮长得一样，会被当成按钮去点 */
         .picked-rel { flex: none; font-size: 14px; font-weight: 700; white-space: nowrap; color: var(--accent-color); }
 
-        .time-picker-header { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(142, 142, 147, 0.2); }
-        .time-picker-title { font-size: 13px; color: var(--text-secondary); font-weight: 600; }
-        .btn-time-zero { background-color: rgba(142, 142, 147, 0.15); color: var(--text-secondary); border: none; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .time-picker-header { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(142, 142, 147, 0.2); }
+        .time-picker-title { font-size: 15px; color: var(--text-main); font-weight: 600; }
+        .btn-time-zero { background-color: rgba(142, 142, 147, 0.15); color: var(--text-main); border: none; height: 30px; padding: 0 12px; border-radius: 15px; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.2s; }
         .btn-time-zero:active { background-color: rgba(142, 142, 147, 0.25); color: var(--text-main); }
         .time-picker-actions { display: flex; gap: 8px; }
-        .btn-time-now { background-color: rgba(0, 122, 255, 0.1); color: var(--accent-color); border: none; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; transition: 0.2s; }
-        .btn-time-now:active { background-color: rgba(0, 122, 255, 0.2); }
+        .btn-time-now { background-color: rgba(var(--accent-rgb), 0.1); color: var(--accent-color); border: none; height: 30px; padding: 0 12px; border-radius: 15px; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .btn-time-now:active { background-color: rgba(var(--accent-rgb), 0.2); }
 
         /* 小按钮外观不变，只把可点区域往上下各撑开，凑够 44px 触摸高度（Apple HIG 的最小点按尺寸）。
            左右不撑：这几个按钮都是并排放的，横向撑开会盖住隔壁按钮 */
@@ -353,15 +355,20 @@
             top: 50%; height: 44px; transform: translateY(-50%);
         }
 
-        .time-picker { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 10px; }
-        .modal-time-stepper { display: flex; flex-direction: column; align-items: center; background: var(--input-bg); border-radius: 12px; width: 60px; overflow: hidden; }
-        .modal-time-btn { width: 100%; height: 26px; display: flex; justify-content: center; align-items: center; color: var(--text-secondary); cursor: pointer; transition: background-color 0.1s; }
-        .modal-time-btn:active { background-color: var(--stepper-btn-active); color: var(--text-main); }
-        .modal-time-btn svg { width: 16px; height: 16px; }
-        .modal-time-stepper input { width: 100%; height: 32px; text-align: center; font-size: 20px; font-weight: 700; background: transparent; border: none; color: var(--text-main); outline: none; padding: 0; min-width: 0; }
-        .time-colon { font-size: 18px; font-weight: 700; color: var(--text-secondary); padding-bottom: 2px; }
+        /* iOS 滚轮：HIG pickers 的 Wheels 样式。滚动、惯性、吸附全用系统原生的，不自己算手势。
+           三行高度由 --wheel-row 推导；中间高亮条在滚动层后面，上下两行用遮罩淡出 */
+        .time-wheels { --wheel-row: 36px; position: relative; display: flex; justify-content: center; align-items: center; margin-top: 8px; height: calc(var(--wheel-row) * 3); }
+        .time-wheels::before { content: ""; position: absolute; left: 0; right: 0; top: var(--wheel-row); height: var(--wheel-row); border-radius: 10px; background: rgba(142, 142, 147, 0.14); pointer-events: none; }
+        .wheel-col { position: relative; flex: 0 1 76px; min-width: 0; height: 100%; }
+        .wheel { height: 100%; overflow-y: auto; overscroll-behavior: contain; scroll-snap-type: y mandatory; padding-block: var(--wheel-row); box-sizing: border-box; scrollbar-width: none; outline: none; touch-action: pan-y;
+                 -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.3), #000 36%, #000 64%, rgba(0, 0, 0, 0.3)); mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.3), #000 36%, #000 64%, rgba(0, 0, 0, 0.3)); }
+        .wheel::-webkit-scrollbar { display: none; }
+        .wheel:focus-visible { box-shadow: inset 0 0 0 2px var(--accent-color); border-radius: 10px; }
+        .wheel-row { height: var(--wheel-row); display: flex; align-items: center; justify-content: center; scroll-snap-align: center; font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; cursor: pointer; user-select: none; -webkit-user-select: none; }
+        .wheel-input { position: absolute; left: 0; right: 0; top: var(--wheel-row); height: var(--wheel-row); width: 100%; padding: 0; border: none; outline: none; border-radius: 10px; text-align: center; font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--text-main); background: var(--input-bg); box-shadow: 0 0 0 2px var(--accent-color); -webkit-appearance: none; appearance: none; }
+        .time-colon { flex: none; width: 16px; text-align: center; font-size: 20px; font-weight: 600; color: var(--text-secondary); position: relative; pointer-events: none; }
 
-        .picker-actions { display: flex; gap: 12px; margin-top: 16px; }
+        .picker-actions { position: sticky; bottom: -16px; z-index: 2; display: flex; gap: 12px; margin: 4px -16px -16px; padding: 12px 16px 16px; background: var(--modal-bg); }
         .picker-btn { flex: 1; padding: 12px; border-radius: 12px; font-size: 16px; font-weight: 600; border: none; cursor: pointer; }
         .btn-cancel-modal { background-color: var(--input-bg); color: var(--text-main); }
         .btn-done-modal { background-color: var(--accent-color); color: white; }
@@ -828,25 +835,7 @@
             </div>
         </div>
 
-        <div class="time-picker">
-            <div class="modal-time-stepper">
-                <div class="modal-time-btn" onclick="stepModalTime('modalH', 1, 23)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg></div>
-                <input type="number" id="modalH" min="0" max="23" onblur="padModalInput(this, 23)">
-                <div class="modal-time-btn" onclick="stepModalTime('modalH', -1, 23)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></div>
-            </div>
-            <span class="time-colon">:</span>
-            <div class="modal-time-stepper">
-                <div class="modal-time-btn" onclick="stepModalTime('modalM', 1, 59)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg></div>
-                <input type="number" id="modalM" min="0" max="59" onblur="padModalInput(this, 59)">
-                <div class="modal-time-btn" onclick="stepModalTime('modalM', -1, 59)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></div>
-            </div>
-            <span class="time-colon">:</span>
-            <div class="modal-time-stepper">
-                <div class="modal-time-btn" onclick="stepModalTime('modalS', 1, 59)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg></div>
-                <input type="number" id="modalS" min="0" max="59" onblur="padModalInput(this, 59)">
-                <div class="modal-time-btn" onclick="stepModalTime('modalS', -1, 59)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></div>
-            </div>
-        </div>
+        <div class="time-wheels" id="timeWheels"></div>
 
         <div class="picker-actions">
             <button class="picker-btn btn-cancel-modal" onclick="closeModal()">取消</button>
@@ -1836,16 +1825,6 @@
         if(mItem) mItem.classList.add('selected');
     }
 
-    function stepModalTime(id, delta, maxVal) {
-        const input = document.getElementById(id);
-        let val = parseInt(input.value, 10);
-        if (isNaN(val)) val = 0;
-        val += delta;
-        if (val > maxVal) val = 0;
-        if (val < 0) val = maxVal;      
-        input.value = String(val).padStart(2, '0');
-    }
-
     function padModalInput(input, maxVal) {
         let val = parseInt(input.value, 10);
         if (isNaN(val)) val = 0;
@@ -1854,18 +1833,137 @@
         input.value = String(val).padStart(2, '0');
     }
 
-    function resetModalTime() {
-        document.getElementById('modalH').value = '00';
-        document.getElementById('modalM').value = '00';
-        document.getElementById('modalS').value = '00';
+    // ---- 时分秒滚轮 ----
+    // 循环滚动：同一组数字铺 5 遍，停稳后悄悄挪回中间那遍。必须等惯性结束再挪，iOS 上中途改 scrollTop 会把惯性掐断
+    const WHEEL_LOOPS = 5, WHEEL_IDLE_MS = 140;
+    const modalWheels = {};
+
+    function createTimeWheel(host, key, count, label) {
+        const col = document.createElement('div'), scroller = document.createElement('div'), input = document.createElement('input');
+        col.className = 'wheel-col';
+        scroller.className = 'wheel';
+        scroller.tabIndex = 0;
+        scroller.setAttribute('role', 'spinbutton');
+        scroller.setAttribute('aria-label', label);
+        scroller.setAttribute('aria-valuemin', 0);
+        scroller.setAttribute('aria-valuemax', count - 1);
+        for (let i = 0; i < count * WHEEL_LOOPS; i++) {
+            const row = document.createElement('div');
+            row.className = 'wheel-row';
+            row.dataset.i = i;
+            row.textContent = pad2(i % count);
+            scroller.appendChild(row);
+        }
+        input.className = 'wheel-input';
+        input.type = 'number';
+        input.inputMode = 'numeric';
+        input.min = 0;
+        input.max = count - 1;
+        input.hidden = true;
+        input.setAttribute('aria-label', label);
+        col.append(scroller, input);
+        host.appendChild(col);
+
+        const mod = (v) => ((v % count) + count) % count;
+        const rowH = () => scroller.firstChild.offsetHeight;
+        const middle = count * Math.floor(WHEEL_LOOPS / 2);
+        const wheel = { target: null, touching: false, idleTimer: 0 };   // target：程序设定、动画还没走完时的值
+        wheel.get = () => wheel.target !== null ? wheel.target : mod(Math.round(scroller.scrollTop / rowH()));
+        wheel.set = (v, animate) => {
+            wheel.target = mod(v);
+            const smooth = animate && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            if (!smooth) { scroller.scrollTop = (middle + wheel.target) * rowH(); wheel.settle(); return; }
+            const cur = Math.round(scroller.scrollTop / rowH());
+            let d = mod(wheel.target - cur);
+            if (d > count / 2) d -= count;                     // 走近的方向，59 到 00 只滚一格
+            scroller.scrollTo({ top: (cur + d) * rowH(), behavior: 'smooth' });
+        };
+        wheel.settle = () => {
+            clearTimeout(wheel.idleTimer);
+            const v = wheel.get(), idx = Math.round(scroller.scrollTop / rowH());
+            wheel.target = null;
+            if (idx < count || idx >= count * (WHEEL_LOOPS - 1)) scroller.scrollTop = (middle + v) * rowH();
+            scroller.setAttribute('aria-valuenow', v);
+        };
+        const waitIdle = () => {
+            clearTimeout(wheel.idleTimer);
+            wheel.idleTimer = setTimeout(() => { if (wheel.touching) waitIdle(); else wheel.settle(); }, WHEEL_IDLE_MS);
+        };
+        const grab = () => { wheel.target = null; wheel.touching = true; };
+        const release = () => { wheel.touching = false; waitIdle(); };
+        scroller.addEventListener('touchstart', grab, { passive: true });
+        scroller.addEventListener('touchend', release);
+        scroller.addEventListener('touchcancel', release);
+        scroller.addEventListener('wheel', () => { wheel.target = null; waitIdle(); }, { passive: true });
+        scroller.addEventListener('scroll', waitIdle, { passive: true });
+
+        scroller.addEventListener('click', (e) => {
+            const row = e.target.closest('.wheel-row');
+            if (!row) return;
+            const v = Number(row.dataset.i) % count;
+            if (v !== wheel.get()) { wheel.set(v, true); return; }
+            // 点中间那格手动输入：focus 必须在点击里同步调用，iOS 才弹键盘
+            input.value = pad2(v);
+            input.hidden = false;
+            input.focus({ preventScroll: true });
+            input.select();
+        });
+        scroller.addEventListener('keydown', (e) => {
+            if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+            e.preventDefault();
+            wheel.set(wheel.get() + (e.key === 'ArrowDown' ? 1 : -1), true);
+        });
+        input.addEventListener('blur', () => {
+            padModalInput(input, count - 1);
+            input.hidden = true;
+            wheel.set(Number(input.value), false);
+        });
+        input.addEventListener('keydown', (e) => { if (e.key === 'Enter') input.blur(); });
+        modalWheels[key] = wheel;
     }
 
+    function setupTimeWheels() {
+        const host = document.getElementById('timeWheels');
+        const colon = () => { const c = document.createElement('span'); c.className = 'time-colon'; c.textContent = ':'; return c; };
+        createTimeWheel(host, 'hour', 24, '时');
+        host.appendChild(colon());
+        createTimeWheel(host, 'minute', 60, '分');
+        host.appendChild(colon());
+        createTimeWheel(host, 'second', 60, '秒');
+    }
+
+    function setModalTime(t, animate) {
+        modalWheels.hour.set(t.hour, animate);
+        modalWheels.minute.set(t.minute, animate);
+        modalWheels.second.set(t.second, animate);
+    }
+
+    function resetModalTime() { setModalTime({ hour: 0, minute: 0, second: 0 }, true); }
+
     // 只填当前时分秒，不动已选日期（要连日期一起跳回今天用顶部「今天」）
-    function setModalTimeNow() {
-        const now = getBeijingTimeObj();
-        document.getElementById('modalH').value = String(now.hour).padStart(2, '0');
-        document.getElementById('modalM').value = String(now.minute).padStart(2, '0');
-        document.getElementById('modalS').value = String(now.second).padStart(2, '0');
+    function setModalTimeNow() { setModalTime(getBeijingTimeObj(), true); }
+
+    // 手动输入时把弹窗抬到键盘上方：只在输入框聚焦时认 visualViewport
+    function setupWheelKeyboard() {
+        const overlay = document.getElementById('datePickerModal'), picker = overlay.querySelector('.ios-picker');
+        const vv = window.visualViewport;
+        if (!vv) return;
+        const fit = () => {
+            const el = document.activeElement;
+            if (!el || !el.classList.contains('wheel-input')) {
+                overlay.style.top = overlay.style.height = picker.style.maxHeight = '';
+                return;
+            }
+            overlay.style.top = vv.offsetTop + 'px';
+            overlay.style.height = vv.height + 'px';
+            picker.style.maxHeight = (vv.height * 0.94) + 'px';
+            const a = el.getBoundingClientRect(), b = picker.getBoundingClientRect();
+            if (a.bottom > b.bottom - 72) picker.scrollTop += a.bottom - b.bottom + 72;   // 72：避开吸底的取消/完成
+        };
+        vv.addEventListener('resize', fit);
+        vv.addEventListener('scroll', fit);
+        document.addEventListener('focusin', fit);
+        document.addEventListener('focusout', () => setTimeout(fit, 0));
     }
 
     function openModal(target) {
@@ -1875,9 +1973,7 @@
         viewYear = initDate.year; 
         viewMonth = initDate.month; 
         selectedDay = initDate.day;
-        document.getElementById('modalH').value = String(initDate.hour).padStart(2, '0');
-        document.getElementById('modalM').value = String(initDate.minute).padStart(2, '0');
-        document.getElementById('modalS').value = String(initDate.second).padStart(2, '0');
+        setModalTime(initDate, false);
         
         renderCalendar();
         document.getElementById('datePickerModal').classList.add('show');
@@ -1892,9 +1988,7 @@
     function jumpToTodayModal() {
         const today = getBeijingTimeObj();
         viewYear = today.year; viewMonth = today.month; selectedDay = today.day;
-        document.getElementById('modalH').value = String(today.hour).padStart(2, '0');
-        document.getElementById('modalM').value = String(today.minute).padStart(2, '0');
-        document.getElementById('modalS').value = String(today.second).padStart(2, '0');
+        setModalTime(today, true);
         renderCalendar();
     }
 
@@ -1978,9 +2072,8 @@
 
     function confirmModal() {
         dpcFinish();                    // 刚滑到下个月就点完成：先落定，取到的才是看见的那个月
-        const read = (id, max) => Math.min(max, Math.max(0, parseInt(document.getElementById(id).value, 10) || 0));
         dates[currentModalTarget] = { year: viewYear, month: viewMonth, day: selectedDay,
-                                      hour: read('modalH', 23), minute: read('modalM', 59), second: read('modalS', 59) };
+                                      hour: modalWheels.hour.get(), minute: modalWheels.minute.get(), second: modalWheels.second.get() };
         const triggerId = currentModalTarget + 'Trigger';
         const placeholderText = currentModalTarget.includes('Start') ? '请选择开始时间...' : (currentModalTarget.includes('End') ? '请选择结束时间...' : '请选择时间...');
         document.getElementById(triggerId).innerHTML = formatDateTimeHtml(dates[currentModalTarget], placeholderText);
@@ -2302,6 +2395,8 @@
         setupModalBehavior();
         setupMonthSwipe();
         setupStepperRepeat();
+        setupTimeWheels();
+        setupWheelKeyboard();
         setupPullToRefresh();
         document.addEventListener('click', closeLunarMenus);
     };
