@@ -34,7 +34,13 @@
             --bg-color: #F2F2F7;
             --card-bg: #FFFFFF;
             --text-main: #000000;
-            --text-secondary: #8E8E93;
+            /* 次要文字：#8E8E93 在白底只有 3.23:1，用户能读到的小字（星期、农历、单位名）不够清楚；
+               #636368 白底 5.97:1、灰底 4.71:1，达到 HIG accessibility 表里 4.5:1 的要求 */
+            --text-secondary: #636368;
+            /* 结果区底色：渐变换成主色 10% 淡底（用户 2026-11-01 从 A/B/C 与 Claude 风格里选定）。--result-tile 是结果区里的小格 */
+            --result-bg: rgba(var(--accent-rgb), 0.10);
+            --result-tile: var(--card-bg);
+            --hairline: rgba(60, 60, 67, 0.18);
             --accent-color: #007AFF;
             --segment-bg: #E3E3E8;
             --input-bg: #F2F2F7;
@@ -60,6 +66,8 @@
                 --card-bg: #1C1C1E;
                 --text-main: #FFFFFF;
                 --text-secondary: #EBEBF599;
+                --result-tile: #3A3A3C;
+                --hairline: rgba(235, 235, 245, 0.18);
                 --accent-color: #0A84FF;
                 --segment-bg: #2C2C2E;
                 --input-bg: #2C2C2E;
@@ -82,10 +90,10 @@
 
         h1 { font-size: 28px; font-weight: 800; text-align: center; margin-bottom: 4px; }
 
-        .real-time-badge { background-color: var(--card-bg); color: var(--text-main); padding: 10px 16px; border-radius: 20px; text-align: center; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px var(--shadow-color); align-self: center; }
+        .real-time-badge { background-color: var(--card-bg); color: var(--text-main); padding: 10px 16px; border-radius: 20px; text-align: center; font-size: 14px; font-weight: 600; align-self: center; }
         .real-time-badge span { color: var(--accent-color); font-variant-numeric: tabular-nums; }
 
-        .card { background-color: var(--card-bg); border-radius: 20px; padding: 20px 16px; box-shadow: 0 8px 24px var(--shadow-color);
+        .card { background-color: var(--card-bg); border-radius: 20px; padding: 20px 16px;
                 /* 跳转落点要避开吸顶导航条，高度由 JS 实测后写进 --nav-offset，不写死 */
                 scroll-margin-top: var(--nav-offset, 72px); }
 
@@ -107,8 +115,7 @@
                     border: none; background: transparent; color: var(--nav-idle);
                     font-size: 15px; font-weight: 600; border-radius: 10px; cursor: pointer;
                     transition: background-color 0.25s, color 0.25s; }
-        .nav-item[aria-current="true"] { background-color: var(--accent-color); color: #FFFFFF;
-                                         box-shadow: 0 4px 12px rgba(var(--accent-rgb), 0.35); }
+        .nav-item[aria-current="true"] { background-color: var(--accent-color); color: #FFFFFF; }
         /* 未选中项的按压反馈；选中项已经是实心药丸，不需要再变 */
         .nav-item:not([aria-current="true"]):active { background-color: var(--stepper-btn-active); }
         
@@ -117,13 +124,11 @@
                           flex-wrap: wrap; gap: 8px 12px; margin-bottom: 16px; }
         /* 标题要能管住它自己的内容：原本 14px/600/灰，跟卡片内的 .input-label（13px/600/灰）
            几乎一模一样，层级是倒挂的。字号随视口伸缩，不按某一个宽度写死 */
-        .section-title { font-size: clamp(15px, 4.2vw, 17px); font-weight: 800; color: var(--text-main);
+        .section-title { font-size: clamp(17px, 5vw, 20px); font-weight: 600; color: var(--text-main);
                          letter-spacing: -0.02em; display: flex; align-items: center; gap: 10px;
                          min-width: 0; }
-        /* 左页边的起点标记：五个模块竖着堆、没有导航，滑到哪靠它认位置。
-           渐变用的是结果卡片同一条（accent → #5E5CE6），不引新颜色 */
-        .section-title::before { content: ""; width: 4px; height: 1.05em; border-radius: 2px; flex: none;
-                                 background: linear-gradient(180deg, var(--accent-color), #5E5CE6); }
+        /* 左页边的起点标记：模块竖着堆，滑到哪靠它认位置。用户要留（2026-11-01），渐变改纯色 */
+        .section-title::before { content: ""; width: 4px; height: 1.05em; border-radius: 2px; flex: none; background-color: var(--accent-color); }
         
         .btn-section-reset { background-color: rgba(142, 142, 147, 0.15); color: var(--accent-color); border: none; padding: 6px 12px; border-radius: 12px; font-size: 12px; font-weight: 700; cursor: pointer; transition: background-color 0.2s; display: flex; align-items: center; gap: 4px; }
         .btn-section-reset:active { background-color: rgba(142, 142, 147, 0.25); }
@@ -144,7 +149,7 @@
 
         .segmented-control { display: flex; background-color: var(--segment-bg); border-radius: 12px; padding: 4px; margin-bottom: 20px; }
         .segment { flex: 1; text-align: center; padding: 10px 0; font-size: 15px; font-weight: 600; cursor: pointer; border-radius: 10px; color: var(--text-secondary); transition: all 0.25s; }
-        .segment.active { background-color: var(--card-bg); color: var(--text-main); box-shadow: 0 4px 10px rgba(0,0,0,0.08); }
+        .segment.active { background-color: var(--card-bg); color: var(--text-main); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
 
         .duration-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
         .convert-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
@@ -160,7 +165,7 @@
             .derived-row > .stepper-group > .sleep-total { align-self: start; }
         }
         .derived-row label { display: flex; align-items: center; gap: 0 6px; flex-wrap: wrap; justify-content: center; text-align: center; }
-        .sleep-hint { font-size: 12px; font-weight: 500; color: var(--text-secondary); opacity: 0.75; }
+        .sleep-hint { font-size: 12px; font-weight: 500; color: var(--text-secondary); }
         .sleep-total { font-size: 12px; font-weight: 600; color: var(--accent-color); margin-top: 6px; min-height: 16px; text-align: center; }
         .sleep-total span { white-space: nowrap; }   /* 窄屏要折行时只在「=」前折，不把「30 分钟」拆开 */
         
@@ -172,16 +177,29 @@
         input[type="number"] { -moz-appearance: textfield !important; }
         
         .stepper-control input { flex: 1; width: 100%; min-width: 0; text-align: center; font-size: 16px; font-weight: 700; border: none; background: transparent; color: var(--text-main); outline: none; padding: 0; font-variant-numeric: tabular-nums; }
-        .stepper-btn { width: 28px; height: 100%; display: flex; justify-content: center; align-items: center; font-size: 18px; font-weight: 600; color: var(--accent-color); background: transparent; border: none; cursor: pointer; transition: background-color 0.15s; padding: 0; }
+        /* 按钮随格子变宽：窄屏保持 HIG 最小 28，宽屏到 40，数字留在中间。
+           禁掉长按选字和放大镜，否则按住连加时 iOS 会弹选区 */
+        .stepper-btn { flex: 0 0 clamp(28px, 32%, 40px); height: 100%; display: flex; touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; justify-content: center; align-items: center; font-size: 18px; font-weight: 600; color: var(--accent-color); background: transparent; border: none; cursor: pointer; transition: background-color 0.15s; padding: 0; }
         .stepper-btn:active { background-color: var(--stepper-btn-active); }
 
         .convert-control { display: flex; align-items: center; background-color: var(--input-bg); border-radius: 12px; width: 100%; height: 44px; overflow: hidden; transition: box-shadow 0.2s; }
         .convert-control:focus-within { box-shadow: 0 0 0 2px var(--accent-color); }
         .convert-control input { flex: 1; width: 100%; min-width: 0; text-align: center; font-size: 18px; font-weight: 700; border: none; background: transparent; color: var(--text-main); outline: none; padding: 0 8px; font-variant-numeric: tabular-nums; }
 
-        .result-card { text-align: center; padding: 24px 16px; background: linear-gradient(135deg, var(--accent-color), #5E5CE6); color: white; border-radius: 20px; box-shadow: 0 10px 30px rgba(0, 122, 255, 0.3); }
-        .result-label { font-size: 14px; opacity: 0.9; margin-bottom: 8px; font-weight: 500; }
-        .result-value { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.4; }
+        /* 结果区：纯色底 + 正文色，靠字号字重分层，不靠渐变和阴影（HIG buttons：醒目靠填充色；typography：用字号字重表达层级） */
+        .result-card { padding: 16px; background-color: var(--result-bg); color: var(--text-main); border-radius: 16px; }
+        .result-label { font-size: 13px; font-weight: 500; line-height: 18px; color: var(--text-secondary); margin-bottom: 6px; }
+        /* 日期在左、时间在右；一行放不下时时间自己掉到下一行，不按宽度写断点 */
+        .result-value { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 2px 16px;
+                        font-size: 22px; font-weight: 700; line-height: 28px; }
+        .result-value.is-text { display: block; }
+        .result-label:empty { display: none; }
+        .rv-date, .rv-time { white-space: nowrap; }
+        .rv-chunk { display: inline-block; }
+        .rv-time { font-weight: 600; font-variant-numeric: tabular-nums; }
+        .result-value.is-note { display: block; font-size: 15px; font-weight: 500; line-height: 20px; color: var(--danger-color); }
+        .result-sub { font-size: 15px; line-height: 20px; color: var(--text-secondary); margin-top: 4px; }
+        .result-sub:empty { display: none; }
 
         /* ================= 核心修复：折合总计数据看板防偏移 ================= */
         .diff-totals-grid { 
@@ -190,13 +208,13 @@
             grid-template-columns: repeat(3, minmax(0, 1fr));
             width: 100%;
             gap: 8px; 
-            margin-top: 20px; 
-            padding-top: 20px; 
-            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            margin-top: 14px;
+            padding-top: 14px;  
+            border-top: 1px solid var(--hairline);
         }
         .diff-total-item { 
-            background: rgba(255, 255, 255, 0.15);
-            border-radius: 12px; 
+            background: var(--result-tile);
+            border-radius: 10px;
             padding: 8px 2px; /* 压缩 padding，为数字腾空间 */
             display: flex;
             flex-direction: column; 
@@ -205,18 +223,15 @@
             overflow: hidden; /* 防止溢出边界 */
         }
         .diff-total-label { 
-            font-size: 11px;
-            opacity: 0.85; 
-            margin-bottom: 4px; 
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 2px;  
             font-weight: 500; 
             white-space: nowrap; /* 强制标题不换行 */
-            transform: scale(0.95);
-            /* 缩放防拥挤 */
         }
         .diff-total-val { 
-            font-size: 14px;
-            /* 字号略微调小保证长数字能放下 */
-            font-weight: 700; 
+            font-size: 15px;
+            font-weight: 600;  
             font-variant-numeric: tabular-nums; 
             width: 100%;
             text-align: center; 
@@ -225,7 +240,7 @@
 
         /* 7 格排成 3×3：秒的数字最长，单独占满最后一行（窄屏下三分之一宽会被拆成两行） */
         .diff-total-item.span-row { grid-column: 1 / -1; }
-        .diff-totals-note { grid-column: 1 / -1; font-size: 11px; opacity: 0.8; line-height: 1.5; margin-top: 2px; }
+        .diff-totals-note { grid-column: 1 / -1; font-size: 12px; color: var(--text-secondary); line-height: 16px; margin-top: 2px; }
 
         /* ================= iOS 风格自定义日期选择器 ================= */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; background-color: var(--modal-overlay); display: flex; justify-content: center; align-items: center; z-index: 999; opacity: 0; pointer-events: none; transition: opacity 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
@@ -287,7 +302,7 @@
         .days div.empty { cursor: default; }
         .days div span { width: min(40px, 100%); aspect-ratio: 1; display: flex; justify-content: center; align-items: center; font-size: 17px; font-weight: 500; border-radius: 50%; transition: background-color 0.2s; }
         .days div:active span { background-color: var(--segment-bg); }
-        .days div.selected span { background-color: var(--accent-color); color: white; font-weight: 700; box-shadow: 0 4px 10px rgba(0,122,255,0.3); }
+        .days div.selected span { background-color: var(--accent-color); color: white; font-weight: 700; }
         .days div.today:not(.selected) span { color: var(--accent-color); font-weight: 700; }
 
         /* 选中日期的详细信息：星期 / 农历 / 距今 */
@@ -325,7 +340,7 @@
         .picker-actions { display: flex; gap: 12px; margin-top: 16px; }
         .picker-btn { flex: 1; padding: 12px; border-radius: 12px; font-size: 16px; font-weight: 600; border: none; cursor: pointer; }
         .btn-cancel-modal { background-color: var(--input-bg); color: var(--text-main); }
-        .btn-done-modal { background-color: var(--accent-color); color: white; box-shadow: 0 4px 12px rgba(0,122,255,0.3); }
+        .btn-done-modal { background-color: var(--accent-color); color: white; }
 
         /* ================= 下拉刷新 ================= */
         /* 先关掉浏览器自带的下拉刷新，否则会和自研的这套同时触发 */
@@ -399,7 +414,7 @@
         .lunar-arrow::before, .lunar-arrow::after { content: ""; flex: 1; height: 1px; background-color: currentColor; opacity: 0.25; }
         .lunar-arrow svg { width: 18px; height: 18px; display: block; }
 
-        .lunar-meta { font-size: 13px; opacity: 0.92; margin-top: 10px; font-weight: 500; line-height: 1.65; }
+        .lunar-meta { font-size: 15px; color: var(--text-secondary); margin-top: 4px; line-height: 20px; }
         .lunar-note { font-size: 12px; color: var(--text-secondary); text-align: center; margin-top: 12px; line-height: 1.5; }
 
         /* 过年快捷跳转：两个按钮平分整行，高度按 44px 触摸标准单独定，不复用 .btn-section-reset（那个只有 29px，且被另外三张卡片共用） */
@@ -549,6 +564,7 @@
         <div class="result-card" style="margin-top: 16px;">
             <div class="result-label">最终推算结果</div>
             <div class="result-value" id="resultDateTime">--</div>
+            <div class="result-sub" id="resultMeta"></div>
         </div>
     </div>
 
@@ -579,8 +595,9 @@
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
         </div>
 
-        <div class="result-card" style="margin-top: 8px; padding: 28px 16px;">
-            <div class="result-value" id="diffResultValue" style="font-size: 23px;">--</div>
+        <div class="result-card" style="margin-top: 8px;">
+            <div class="result-label" id="diffResultLabel"></div>
+            <div class="result-value is-text" id="diffResultValue">--</div>
 
             <div class="diff-totals-grid" id="diffTotalsGrid">
                 <div class="diff-total-item">
@@ -678,7 +695,7 @@
 
         <div class="result-card" style="margin-top: 16px;">
             <div class="result-label">农历</div>
-            <div class="result-value" id="lunarResultValue">--</div>
+            <div class="result-value is-text" id="lunarResultValue">--</div>
             <div class="lunar-meta" id="lunarResultMeta"></div>
         </div>
         <div class="lunar-note" id="lunarRangeNote"></div>
@@ -918,15 +935,18 @@
     }
     // ==== calc-core:end ====
 
+    // 第二行小字：星期 + 农历（超出农历数据范围就只给星期）。输入框和推算结果共用，写法才不会分叉
+    function dateMetaText(obj) {
+        const lunar = lunarOfSolar(obj.year, obj.month, obj.day);
+        return '星期' + solarWeekdayCn(obj.year, obj.month, obj.day) +
+               (lunar ? ' · 农历' + lunarMonthToChinese(lunar.month, lunar.isLeap) + lunarDayToChinese(lunar.day) : '');
+    }
+
     function formatDateTimeHtml(obj, placeholderText) {
         const svgIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>`;
         if (!obj) return `<span class="placeholder">${placeholderText}</span>` + svgIcon;
         const text = `${obj.year}年${String(obj.month).padStart(2,'0')}月${String(obj.day).padStart(2,'0')}日 ${String(obj.hour).padStart(2,'0')}:${String(obj.minute).padStart(2,'0')}:${String(obj.second).padStart(2,'0')}`;
-        // 第二行小字：星期 + 农历（超出农历数据范围就只给星期）
-        const lunar = lunarOfSolar(obj.year, obj.month, obj.day);
-        const sub = '星期' + solarWeekdayCn(obj.year, obj.month, obj.day) +
-                    (lunar ? ' · 农历' + lunarMonthToChinese(lunar.month, lunar.isLeap) + lunarDayToChinese(lunar.day) : '');
-        return `<span class="dt-text">${text}<span class="dt-sub">${sub}</span></span>` + svgIcon;
+        return `<span class="dt-text">${text}<span class="dt-sub">${dateMetaText(obj)}</span></span>` + svgIcon;
     }
 
     // ================= 模块一：日期推算控制 =================
@@ -939,7 +959,7 @@
     function clearTime() {
         dates.base = null;
         document.getElementById('baseTrigger').innerHTML = formatDateTimeHtml(null, '请选择时间...');
-        document.getElementById('resultDateTime').textContent = "--";
+        showCalcResult(null);
     }
 
     function resetAdjustments() {
@@ -1000,15 +1020,66 @@
     function calculate() {
         updateSleepTotal();
         updateWeekTotal();
-        const out = document.getElementById('resultDateTime');
-        if (!dates.base) { out.textContent = "--"; return; }
+        if (!dates.base) { showCalcResult(null); return; }
         const r = addDuration(dates.base, {
             years: getVal('valY'), months: getVal('valM'), weeks: getVal('valW'), days: getVal('valD'),
             hours: getVal('valh'), minutes: getVal('valm'), seconds: getVal('vals'),
             sleepCycles: getVal('valSleep')
         }, currentMode === 'add' ? 1 : -1);
-        if (!r) { out.textContent = `超出可计算范围（公元 ${CALC_MIN_YEAR}–${CALC_MAX_YEAR} 年）`; return; }
-        out.textContent = `${r.year}年${pad2(r.month)}月${pad2(r.day)}日 ${pad2(r.hour)}:${pad2(r.minute)}:${pad2(r.second)}`;
+        if (!r) { showCalcResult(null, `超出可计算范围（公元 ${CALC_MIN_YEAR}–${CALC_MAX_YEAR} 年）`); return; }
+        showCalcResult(r);
+    }
+
+    // 推算结果三种状态只从这里写：有结果 / 超范围提示 / 空。星期农历跟日期一起换，不会留下上一次的旧值
+    function showCalcResult(r, note) {
+        const out = document.getElementById('resultDateTime');
+        const meta = document.getElementById('resultMeta');
+        out.classList.toggle('is-note', !!note);
+        if (r) {
+            const date = document.createElement('span'), time = document.createElement('span');
+            date.className = 'rv-date'; time.className = 'rv-time';
+            date.textContent = `${r.year}年${pad2(r.month)}月${pad2(r.day)}日`;
+            time.textContent = `${pad2(r.hour)}:${pad2(r.minute)}:${pad2(r.second)}`;
+            out.replaceChildren(date, time);
+            meta.textContent = dateMetaText(r);
+        } else {
+            out.textContent = note || '--';
+            meta.textContent = '';
+        }
+    }
+
+    // 按住 − / + 连续变化，同 UIStepper.autorepeat（官方默认开）。
+    // 500ms 起步、每 100ms 一次、连按 2 秒后每 40ms 一次：Apple 没公开这些数，是我定的，待真机调
+    function setupStepperRepeat() {
+        let holdTimer = 0, repeating = false;
+        const stop = () => { clearTimeout(holdTimer); holdTimer = 0; };
+        document.addEventListener('pointerdown', (e) => {
+            const btn = e.target.closest && e.target.closest('.stepper-btn');
+            repeating = false;
+            if (!btn || e.button !== 0) return;
+            const m = /stepValue\('(\w+)',\s*(-?1)\)/.exec(btn.getAttribute('onclick') || '');
+            if (!m) return;
+            const startedAt = performance.now();
+            const tick = () => {
+                repeating = true;
+                stepValue(m[1], Number(m[2]));
+                holdTimer = setTimeout(tick, performance.now() - startedAt > 2500 ? 40 : 100);
+            };
+            stop();
+            holdTimer = setTimeout(tick, 500);
+        });
+        ['pointerup', 'pointercancel', 'blur'].forEach(t => window.addEventListener(t, stop));
+        document.addEventListener('pointermove', (e) => {   // 手指滑开就停，防止滚动页面时还在加
+            if (holdTimer && !(e.target.closest && e.target.closest('.stepper-btn'))) stop();
+        });
+        document.addEventListener('contextmenu', (e) => {   // 安卓长按会弹菜单并取消指针
+            if (e.target.closest && e.target.closest('.stepper-btn')) e.preventDefault();
+        });
+        // 连按结束时浏览器还会补一次 click，吃掉，否则松手多加 1
+        document.addEventListener('click', (e) => {
+            if (repeating && e.target.closest && e.target.closest('.stepper-btn')) { e.stopPropagation(); e.preventDefault(); }
+            repeating = false;
+        }, true);
     }
 
     // ================= 模块二：日期时间间隔 =================
@@ -1025,19 +1096,32 @@
         dates.diffEnd = null;
         document.getElementById('diffStartTrigger').innerHTML = formatDateTimeHtml(null, '请选择开始时间...');
         document.getElementById('diffEndTrigger').innerHTML = formatDateTimeHtml(null, '请选择结束时间...');
-        document.getElementById('diffResultValue').textContent = "--";
+        showDiffText('--');
         document.getElementById('diffTotalsGrid').style.display = 'none';
+    }
+
+    // 「相差」放到小标题，大字只留时长；「38秒」这样的数字加单位各成一块，换行不会拆开
+    function showDiffText(text) {
+        const out = document.getElementById('diffResultValue');
+        const m = /^(相差(?:\(反向\))?) (.+)$/.exec(text);
+        document.getElementById('diffResultLabel').textContent = m ? m[1].replace('(反向)', '（反向）') : '';
+        out.replaceChildren(...(m ? m[2] : text).match(/\d+\D+|\D+/g).map(part => {
+            const span = document.createElement('span');
+            span.className = 'rv-chunk';
+            span.textContent = part;
+            return span;
+        }));
     }
 
     function calculateDiff() {
         if (!dates.diffStart || !dates.diffEnd) {
-            document.getElementById('diffResultValue').textContent = "--";
+            showDiffText('--');
             document.getElementById('diffTotalsGrid').style.display = 'none';
             return;
         }
 
         const d = diffPoints(dates.diffStart, dates.diffEnd);
-        document.getElementById('diffResultValue').textContent = formatDiffText(d);
+        showDiffText(formatDiffText(d));
 
         // 折合值：天及以下是精确的；年、月长短不一，按 365 天 / 365÷12 天折算（界面上标了 ≈）
         const totS = Math.abs(d.totalMs) / 1000;
@@ -2163,6 +2247,7 @@
         initKeyboardFix();
         setupModalBehavior();
         setupMonthSwipe();
+        setupStepperRepeat();
         setupPullToRefresh();
         document.addEventListener('click', closeLunarMenus);
     };
